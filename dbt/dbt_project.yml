@@ -45,6 +45,10 @@ vars:
   # Upper sanity cap for a single sleep session; sessions beyond this are
   # treated as recording artifacts and dropped at staging.
   max_sleep_hours: 15
+  # Whether steps count toward health data gap detection
+  # (fct_health_data_gaps). Temporarily false while step data is not syncing
+  # (see #134); set to true to re-enable once sync is fixed.
+  health_gaps_include_steps: false
 
 # Databricks-specific configurations
 # These configs apply when targeting Databricks (dev/test/prod targets)

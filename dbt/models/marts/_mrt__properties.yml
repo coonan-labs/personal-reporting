@@ -486,3 +486,59 @@ models:
       - name: provider
         description: Source system that recorded the session.
         data_type: string
+  - name: fct_health_data_gaps
+    description: >
+      Health data gaps fact, one row per calendar date in the observed window
+      flagging dates with missing steps and/or sleep data. Steps can be
+      excluded from gap detection with the health_gaps_include_steps
+      variable (currently false while step data is not syncing, see #134).
+    versions:
+      - v: 1
+        defined_in: fct_health_data_gaps_v1
+        description: >
+          Health data gaps fact, one row per calendar date in the observed
+          window flagging dates with missing steps and/or sleep data.
+    constraints:
+      - type: primary_key
+        warn_unenforced: false
+        columns:
+          - activity_date
+    columns:
+      - name: activity_date
+        description: Calendar date (local) the coverage row describes.
+        data_type: date
+        data_tests:
+          - unique
+        constraints:
+          - type: not_null
+      - name: has_steps
+        description: Whether any step intervals were recorded on the date.
+        data_type: boolean
+      - name: has_sleep
+        description: Whether any sleep session starts on the date.
+        data_type: boolean
+      - name: step_count
+        description: Total steps recorded on the date, null when none.
+        data_type: bigint
+      - name: sleep_minutes
+        description: Total sleep minutes starting on the date, null when none.
+        data_type: numeric(38, 9)
+      - name: is_gap
+        description: >
+          Whether the date is missing steps and/or sleep data under the
+          current check configuration.
+        data_type: boolean
+      - name: gap_type
+        description: >
+          Which sources are missing on the date (steps, sleep, both, or
+          none). When steps are excluded from the check, only sleep or
+          none occur.
+        data_type: string
+        data_tests:
+          - accepted_values:
+              arguments:
+                values:
+                  - steps
+                  - sleep
+                  - both
+                  - none
