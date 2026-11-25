@@ -16,6 +16,11 @@
 -- 2025-02-17: neither
 -- 2025-02-18: steps + sleep present
 -- Returns rows only when the model disagrees.
+--
+-- Note: the total-outage fallback (zero step rows -> the window start) is not
+-- covered by test_cases below — the fixtures always contain steps. It was
+-- verified by running the compiled model against an empty core_daily_steps:
+-- every window date flagged steps/both, none flagged none.
 
 {% set test_cases = [
     ('2025-02-14', 'none', 'none'),

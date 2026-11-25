@@ -1,7 +1,6 @@
 # Personal Progress Dimensional Datamart
 
-**Status: specification — the working design is agreed (naming, grains, and open
-decisions resolved below); no code changes yet.** Implementation is a separate task.
+**Status: implemented — the tables below are built by the dbt models in `dbt/models/marts/`; this doc describes the implemented design.**
 
 ## Objective
 

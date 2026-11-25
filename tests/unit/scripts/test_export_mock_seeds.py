@@ -274,6 +274,45 @@ def test_export_table_preserves_hand_maintained_rows(tmp_path):
     assert len(written) == 6
 
 
+def test_export_table_preserved_rows_drop_unknown_columns(tmp_path):
+    """A GAPFIX row with a column BigQuery dropped no longer breaks the write."""
+    out_dir = tmp_path / "mock_sources"
+    target = out_dir / "hubspot" / "hubspot__contacts.csv"
+    target.parent.mkdir(parents=True)
+    with open(target, "w", newline="", encoding="utf-8") as f:
+        writer = csv.DictWriter(f, fieldnames=["id", "properties__email", "_dlt_id", "legacy_col"])
+        writer.writeheader()
+        writer.writerow(
+            {
+                "id": "9",
+                "properties__email": "kept@example.com",
+                "_dlt_id": "GAPFIX-TEST-2",
+                "legacy_col": "gone",
+            }
+        )
+    rows = _sample_rows()
+    for i, row in enumerate(rows):
+        row["_dlt_id"] = f"sample-{i}"
+    client = _FakeClient({"hubspot__contacts": rows})
+
+    result = export_mock_seeds.export_table(
+        client,
+        "hubspot",
+        "hubspot__contacts",
+        project_id="test-project",
+        raw_dataset="raw_test",
+        sample_rows=5,
+        output_dir=out_dir,
+    )
+
+    with open(result, newline="", encoding="utf-8") as f:
+        written = list(csv.DictReader(f))
+    written_ids = {row["_dlt_id"] for row in written}
+    assert "GAPFIX-TEST-2" in written_ids
+    assert "legacy_col" not in written[0]
+    assert len(written) == 6
+
+
 def test_export_table_returns_none_when_table_is_empty(tmp_path):
     client = _FakeClient({"hubspot__contacts": []})
 

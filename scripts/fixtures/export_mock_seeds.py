@@ -254,10 +254,13 @@ def export_table(
     out_file = out_dir / source_name / f"{identifier}.csv"
     if not dry_run:
         # Preserve hand-maintained rows (GAPFIX-*) from the previous seed
-        # file; regeneration would otherwise wipe them.
+        # file; regeneration would otherwise wipe them. Intersect with the
+        # fresh sample's columns: if BigQuery dropped a column a hand row
+        # still has, DictWriter would otherwise raise on the extra key.
         kept_ids = {str(row.get("_dlt_id", "")) for row in results}
+        fieldnames = set(results[0].keys())
         results = results + [
-            row
+            {key: value for key, value in row.items() if key in fieldnames}
             for row in read_hand_maintained_rows(out_file)
             if str(row.get("_dlt_id", "")) not in kept_ids
         ]
