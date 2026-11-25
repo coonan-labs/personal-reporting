@@ -448,13 +448,17 @@ def update_pagination_fields(
         # HubSpot's `after` cursor is the id of the final record in the page.
         # Preserve opaque cursors from captured APIs, but make generated
         # HubSpot fixtures internally consistent with the response payload.
+        # A missing cursor means the capture was a single page (HubSpot omits
+        # paging.next.after when everything fits); synthesize the fixture
+        # cursor from the last record so page 1 still chains to page 2.
         if (
             records
             and paginator_cursor_path == "paging.next.after"
-            and cursor_value == "6"
+            and cursor_value in ("6", None)
             and isinstance(records[-1].get("id"), (str, int))
         ):
             set_nested_value(payload, paginator_cursor_path, str(records[-1]["id"]))
+            cursor_value = str(records[-1]["id"])
         if cursor_value is None:
             raise ValueError(
                 f"Captured response is missing the dlt paginator cursor path "

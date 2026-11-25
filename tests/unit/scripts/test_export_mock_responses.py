@@ -419,26 +419,46 @@ def test_save_captured_responses_writes_file_to_disk(tmp_path, monkeypatch):
         assert json.loads(file_path.read_text(encoding="utf-8"))
 
 
-def test_process_and_split_payload_rejects_missing_configured_pagination():
-    """A paginated resource without its configured response cursor is invalid."""
+def test_process_and_split_payload_synthesizes_cursor_for_single_page_capture():
+    """A single-page HubSpot capture without paging.next.after still splits.
+
+    HubSpot omits the cursor when everything fits in one page; the generated
+    page 1 takes the last record's id as its cursor so it still chains to
+    page 2 in pagination tests.
+    """
+    payload = {
+        "total": 6,
+        "results": [{"id": i, "updatedAt": f"2024-03-1{i}T00:00:00Z"} for i in range(1, 7)],
+    }
+
+    files = export_mock_responses.process_and_split_payload(
+        payload,
+        "hubspot__tickets",
+        incremental_cursor_path="updatedAt",
+        paginator_cursor_path="paging.next.after",
+    )
+
+    assert files["hubspot__tickets-run1_page1.json"]["paging"]["next"]["after"] == "3"
+
+
+def test_process_and_split_payload_rejects_missing_cursor_for_other_paginators():
+    """A missing cursor still fails when no fixture cursor can be derived.
+
+    Only HubSpot's paging.next.after is a record id that can be synthesized
+    from the last record; other paginators (e.g. Notion's next_cursor) keep
+    the guard.
+    """
     payload = {
         "total": 1,
-        "results": [
-            {"id": 1, "updatedAt": "2024-03-10T00:00:00Z"},
-            {"id": 2, "updatedAt": "2024-03-11T00:00:00Z"},
-            {"id": 3, "updatedAt": "2024-03-12T00:00:00Z"},
-            {"id": 4, "updatedAt": "2024-03-13T00:00:00Z"},
-            {"id": 5, "updatedAt": "2024-03-14T00:00:00Z"},
-            {"id": 6, "updatedAt": "2024-03-15T00:00:00Z"},
-        ],
+        "results": [{"id": i, "updatedAt": f"2024-03-1{i}T00:00:00Z"} for i in range(1, 7)],
     }
 
     with pytest.raises(ValueError, match="paginator cursor path"):
         export_mock_responses.process_and_split_payload(
             payload,
-            "hubspot__contacts",
+            "notion__data_source_rows",
             incremental_cursor_path="updatedAt",
-            paginator_cursor_path="paging.next.after",
+            paginator_cursor_path="next_cursor",
         )
 
 
