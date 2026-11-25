@@ -60,8 +60,8 @@ sleep_sessions as (
         'SLEEP' as session_kind,
         cast(session_id as string) as session_id,
         cast(session_date as date) as session_date,
-        started_at,
-        ended_at,
+        cast(started_at as timestamp) as started_at,
+        cast(ended_at as timestamp) as ended_at,
         case
             when is_main_sleep then 'MAIN'
             else 'OTHER'
@@ -86,8 +86,8 @@ exercise_sessions as (
         'EXERCISE' as session_kind,
         cast(session_id as string) as session_id,
         cast(started_at as date) as session_date,
-        started_at,
-        ended_at,
+        cast(started_at as timestamp) as started_at,
+        cast(ended_at as timestamp) as ended_at,
         'NOT_APPLICABLE' as sleep_type,
         cast(active_duration_minutes as numeric(38, 9)) as duration_minutes,
         cast(null as bigint) as asleep_minutes,
