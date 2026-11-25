@@ -239,6 +239,41 @@ def test_export_table_samples_scrubs_and_writes_csv(tmp_path):
     assert rows[0]["meta"] == '{"source": "web", "score": 3}'
 
 
+def test_export_table_preserves_hand_maintained_rows(tmp_path):
+    """Regeneration keeps GAPFIX-* rows and drops stale sampled rows."""
+    out_dir = tmp_path / "mock_sources"
+    target = out_dir / "hubspot" / "hubspot__contacts.csv"
+    target.parent.mkdir(parents=True)
+    with open(target, "w", newline="", encoding="utf-8") as f:
+        writer = csv.DictWriter(f, fieldnames=["id", "properties__email", "_dlt_id"])
+        writer.writeheader()
+        writer.writerow(
+            {"id": "9", "properties__email": "kept@example.com", "_dlt_id": "GAPFIX-TEST-1"}
+        )
+        writer.writerow({"id": "8", "properties__email": "stale@example.com", "_dlt_id": "old-row"})
+    rows = _sample_rows()
+    for i, row in enumerate(rows):
+        row["_dlt_id"] = f"sample-{i}"
+    client = _FakeClient({"hubspot__contacts": rows})
+
+    result = export_mock_seeds.export_table(
+        client,
+        "hubspot",
+        "hubspot__contacts",
+        project_id="test-project",
+        raw_dataset="raw_test",
+        sample_rows=5,
+        output_dir=out_dir,
+    )
+
+    with open(result, newline="", encoding="utf-8") as f:
+        written = list(csv.DictReader(f))
+    written_ids = {row["_dlt_id"] for row in written}
+    assert "GAPFIX-TEST-1" in written_ids
+    assert "old-row" not in written_ids
+    assert len(written) == 6
+
+
 def test_export_table_returns_none_when_table_is_empty(tmp_path):
     client = _FakeClient({"hubspot__contacts": []})
 

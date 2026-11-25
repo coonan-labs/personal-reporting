@@ -491,7 +491,7 @@ models:
       Health data gaps fact, one row per calendar date in the observed window
       flagging dates with missing steps and/or sleep data. Steps can be
       excluded from gap detection with the health_gaps_include_steps
-      variable (currently false while step data is not syncing, see #134).
+      variable (see #134).
     versions:
       - v: 1
         defined_in: fct_health_data_gaps_v1
@@ -510,6 +510,10 @@ models:
         data_tests:
           - unique
           - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_date', v=1)
+                field: date_day
         constraints:
           - type: not_null
       - name: has_steps

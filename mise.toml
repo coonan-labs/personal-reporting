@@ -85,6 +85,11 @@ dir = "dbt"
 raw_args = true
 run = "uv run dbt build --project-dir . --profiles-dir . --target mock"
 
+[tasks.dbt-build-mock-steps]
+description = "Build dbt models and tests against local DuckDB fixtures with steps included in gap detection"
+dir = "dbt"
+run = "uv run dbt build --project-dir . --profiles-dir . --target mock --vars '{\"health_gaps_include_steps\": true}'"
+
 [tasks.dbt-build]
 description = "Build dbt models and tests against DBT_TARGET (starts the Databricks warehouse)"
 depends = ["validate-target", "databricks-start"]

@@ -14,7 +14,6 @@ repo.
 ```
 dbt/checks/
 └── manifest/
-    ├── check_constraints.py
     ├── check_data_tests.py
     ├── check_seeds.py
     ├── check_unit_tests.py
@@ -75,12 +74,3 @@ manifest_checks:
 
 Bouncer discovers these checks via the `custom_checks_dir: checks` setting
 in `dbt/dbt-bouncer.yml` (relative to the dbt project directory).
-
-### `check_constraints.py`
-
-- **`check_table_has_not_null_constraints`** — Fails if any documented column of
-  a materialized table does not define a `not_null` constraint. Guarantees the
-  warehouse DDL carries the integrity checks, not just the test suite.
-- **`check_table_has_primary_key_constraint`** — Fails if a materialized table
-  does not define a primary_key constraint on its grain key (column-level or
-  model-level).

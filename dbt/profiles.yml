@@ -25,7 +25,7 @@ personal:
       type: duckdb
       path: dbt.duckdb
       schema: "{{ env_var('DBT_SCHEMA', 'reporting_dev') }}"
-      # Session timezone is pinned to UTC by the dbt-build-mock task
+      # Session timezone is pinned to UTC globally via mise.toml [env]
       # (TZ=UTC); profile `settings` do not apply session-scoped
       # settings like TimeZone under dbt 2.x.
     # Primary targets - Databricks Unity Catalog

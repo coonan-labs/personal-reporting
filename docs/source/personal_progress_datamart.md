@@ -29,6 +29,7 @@ conformed dimensions                    facts
   dim_group ←───┘                                    │
   dim_group_tier ←── (referenced via dim_group)      │
                   fct_health_session ←── dim_date    │
+                  fct_health_data_gaps ←── dim_date  │
                   └───────────────────────────────────┘
 ```
 
@@ -45,6 +46,7 @@ the current marts**; it does not read raw dlt tables. Inputs:
 | `fct_habit_occurrence` | `int_habits` | one row per habit occurrence per tracking period |
 | `fct_engagement` | `stg_hubspot__engagements`, `stg_hubspot__engagement_contacts`, `stg_hubspot__contacts`, `stg_hubspot__companies` | engagement-contact bridge |
 | `fct_health_session` | `core_sleep_sessions`, `core_exercise_sessions` | one row per sleep or exercise session |
+| `fct_health_data_gaps` | `core_daily_steps`, `core_sleep_sessions` | one row per calendar date; flags missing steps/sleep |
 
 **Implemented.** These tables superseded `habits` (v1), `habits_metrics_v1`,
 and `engagement_contacts_v1`: the occurrence fact absorbed `habits` v1, the derived
@@ -245,6 +247,29 @@ Notes:
 - A separate `fct_daily_steps` may be split out later if per-interval/device step
   analysis is wanted (`stg_google_health__steps` holds `device_name`,
   `data_source_platform`, interval counts).
+
+### `fct_health_data_gaps` — missing steps/sleep dates
+
+**Grain: one row per calendar date in the observed window.** Flags dates with
+missing steps and/or sleep data so sync gaps are visible instead of silent.
+
+| Column | Type | Notes |
+|---|---|---|
+| `activity_date` | PK, FK | → `dim_date`; calendar date (local) |
+| `has_steps` / `has_sleep` | boolean | whether any data was recorded on the date |
+| `step_count` | int | measure, null when none |
+| `sleep_minutes` | numeric | measure, null when none |
+| `is_gap` | boolean | whether the date is missing data under the current check configuration |
+| `gap_type` | string | `steps` / `sleep` / `both` / `none` |
+
+Notes:
+- The `health_gaps_include_steps` var excludes steps from gap detection when
+  false; `has_steps` / `step_count` are still reported for context.
+- A date counts as a gap for a source only once that source has started
+  reporting; a source that has never reported falls back to the window start,
+  so a total outage is flagged.
+- The recent-gaps singular test warns on gap dates in the last 30 days
+  (disabled on the mock target, where fixtures end in 2025).
 
 ## New seed: `group_connect_cadence`
 

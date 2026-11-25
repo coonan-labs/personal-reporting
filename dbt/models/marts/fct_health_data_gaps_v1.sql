@@ -6,18 +6,22 @@
 --          in the observed window, with flags for each source and the gap type.
 --
 --          Steps can be excluded from gap detection with the
---          health_gaps_include_steps variable (currently false while step data
---          is not syncing, see #134). Steps data is still reported for context
---          when excluded; only the gap determination ignores it.
+--          health_gaps_include_steps variable (see #134). Steps data is
+--          still reported for context when excluded; only the gap
+--          determination ignores it.
 --
 --          A date only counts as a gap for a source once that source has
 --          started reporting (its first observed date); earlier dates are
---          not flagged for the not-yet-started source.
+--          not flagged for the not-yet-started source. A source that has
+--          never reported at all falls back to the window start, so a
+--          total outage is flagged instead of invisible.
 --
 -- Sources: dim_date, core_daily_steps, core_sleep_sessions
 -- Output: One row per calendar date in the observed window
 -- ============================================================================
 
+-- Window end derives from run_started_at in UTC, while activity_date is a
+-- civil/local date; the boundary can be off by a day for UTC+ time zones.
 {% set yesterday = run_started_at - modules.datetime.timedelta(days=1) %}
 {% set window_end_date = yesterday.strftime('%Y-%m-%d') %}
 
@@ -78,9 +82,17 @@ observed_bounds as (
     select
         min(activity_date) as window_start_date,
         -- Per-source first observed dates: a date before a source's start
-        -- is not a gap for that source (see date_coverage below).
-        (select min(daily_steps.activity_date) from daily_steps) as steps_start_date,
-        (select min(daily_sleep.activity_date) from daily_sleep) as sleep_start_date
+        -- is not a gap for that source (see date_coverage below). When a
+        -- source has never reported at all, fall back to the window start
+        -- so a total outage is flagged instead of invisible.
+        coalesce(
+            (select min(daily_steps.activity_date) from daily_steps),
+            min(activity_date)
+        ) as steps_start_date,
+        coalesce(
+            (select min(daily_sleep.activity_date) from daily_sleep),
+            min(activity_date)
+        ) as sleep_start_date
     from
         all_observed_dates
 
@@ -109,6 +121,8 @@ date_coverage as (
     left join daily_sleep as sleep
         on dim.date_day = sleep.activity_date
     where
+        -- dim_date's spine starts 2016-01-01; observed dates before it
+        -- have no dimension row and are excluded here.
         dim.date_day between (select observed_bounds.window_start_date from observed_bounds)
         and cast('{{ window_end_date }}' as date)
 
@@ -143,11 +157,11 @@ gap_flags as (
 final as (
 
     select
-        cast(activity_date as date) as activity_date,
+        activity_date,
         has_steps,
         has_sleep,
-        cast(step_count as bigint) as step_count,
-        cast(sleep_minutes as numeric(38, 9)) as sleep_minutes,
+        step_count,
+        sleep_minutes,
         gap_type <> 'none' as is_gap,
         gap_type
     from
