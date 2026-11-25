@@ -1,4 +1,9 @@
-{{ config(severity = 'warn') }}
+{{
+    config(
+        severity = 'warn',
+        description = 'Warn when any gap date falls in the last 30 days.'
+    )
+}}
 
 -- Warn when any gap date falls in the last 30 days. Expected gaps (device not
 -- worn) stay visible without failing the build.

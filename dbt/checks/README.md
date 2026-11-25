@@ -5,10 +5,9 @@ This folder holds custom [dbt-bouncer](https://github.com/godatadriver/dbt-bounc
 `ai_file_review/bouncer_checks` governance setup, adapted for use in this
 repo.
 
-> **Note:** These checks are **not yet wired into dbt-bouncer
-> configuration**. They are staged here for review before being referenced
-> from a `dbt-bouncer.yml`/`bouncer_checks` config (e.g. via a
-> `custom_checks_dir` or equivalent setting).
+> **Note:** These checks are wired into dbt-bouncer via
+> `dbt/dbt-bouncer.yml` (`custom_checks_dir: checks`) and run in CI on
+> every pull request (see `.github/workflows/lint.yml`).
 
 ## Layout
 
@@ -55,7 +54,7 @@ dbt/checks/
   (`.yml`) file name does not match a configured `file_name_pattern` regex.
   Enforces consistent property-file naming conventions.
 
-## Usage (once enabled)
+## Usage
 
 Each check can be added to a dbt-bouncer config under `manifest_checks`,
 e.g.:
@@ -74,10 +73,8 @@ manifest_checks:
     file_name_pattern: ^_.*\.yml$
 ```
 
-Bouncer must also be configured to discover these custom checks (e.g. a
-`custom_checks_dir: dbt/checks` setting, or equivalent), which is
-intentionally **not** configured yet — this will be a follow-up change once
-the checks have been reviewed for this project.
+Bouncer discovers these checks via the `custom_checks_dir: checks` setting
+in `dbt/dbt-bouncer.yml` (relative to the dbt project directory).
 
 ### `check_constraints.py`
 

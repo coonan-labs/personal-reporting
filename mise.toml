@@ -12,6 +12,13 @@ DBT_PROJECT_DIR = "{{ config_root }}/dbt"
 DBT_PROFILES_DIR = "{{ config_root }}/dbt"
 PYTHONUNBUFFERED = "1"
 RUNTIME__LOG_LEVEL = "INFO"
+# Pin the session timezone to UTC for every mise invocation: dbt 2.x does
+# not apply session-scoped settings (e.g. TimeZone) from profiles.yml, so
+# DuckDB would otherwise use the machine timezone and timestamp casts
+# would shift vs Databricks. Databricks/BigQuery sessions default to UTC
+# and ignore this variable. Direct dbt invocations that bypass mise still
+# use the machine timezone.
+TZ = "UTC"
 
 [tasks.setup]
 description = "Install Python dependencies"
@@ -75,10 +82,6 @@ run = "uv run dbt deps"
 [tasks.dbt-build-mock]
 description = "Build dbt models and tests against local DuckDB fixtures"
 dir = "dbt"
-# Pin the session timezone to UTC: dbt 2.x does not apply session-scoped
-# settings (e.g. TimeZone) from profiles.yml, so DuckDB would otherwise
-# use the machine timezone and timestamp casts would shift vs Databricks.
-env = { TZ = "UTC" }
 raw_args = true
 run = "uv run dbt build --project-dir . --profiles-dir . --target mock"
 

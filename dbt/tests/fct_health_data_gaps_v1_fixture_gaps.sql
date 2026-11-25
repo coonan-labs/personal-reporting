@@ -1,3 +1,10 @@
+{{
+    config(
+        enabled = (target.name == 'mock'),
+        description = 'Fixture block 2025-02-14..18 flagged as expected.'
+    )
+}}
+
 -- Singular test: the fixture block 2025-02-14..2025-02-18 must be flagged
 -- exactly as expected. To expand the block, add a row to test_cases below
 -- (and the matching fixture rows). Each case is (activity_date, expected
@@ -17,7 +24,7 @@
     ('2025-02-17', 'both', 'sleep'),
     ('2025-02-18', 'none', 'none'),
 ] %}
-{% set include_steps = var('health_gaps_include_steps', true) %}
+{% set include_steps = var('health_gaps_include_steps', false) %}
 
 with expected as (
 
@@ -34,12 +41,13 @@ with expected as (
 )
 
 select
-    actual.activity_date,
+    expected.activity_date,
     actual.gap_type as actual_gap_type,
     expected.expected_gap_type
 from
-    {{ ref('fct_health_data_gaps', v=1) }} as actual
-inner join expected
+    expected
+left join {{ ref('fct_health_data_gaps', v=1) }} as actual
     on expected.activity_date = actual.activity_date
 where
-    actual.gap_type <> expected.expected_gap_type
+    actual.activity_date is null
+    or actual.gap_type <> expected.expected_gap_type
