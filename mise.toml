@@ -75,6 +75,10 @@ run = "uv run dbt deps"
 [tasks.dbt-build-mock]
 description = "Build dbt models and tests against local DuckDB fixtures"
 dir = "dbt"
+# Pin the session timezone to UTC: dbt 2.x does not apply session-scoped
+# settings (e.g. TimeZone) from profiles.yml, so DuckDB would otherwise
+# use the machine timezone and timestamp casts would shift vs Databricks.
+env = { TZ = "UTC" }
 raw_args = true
 run = "uv run dbt build --project-dir . --profiles-dir . --target mock"
 
