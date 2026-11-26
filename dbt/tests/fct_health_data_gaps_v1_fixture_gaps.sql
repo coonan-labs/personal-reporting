@@ -8,8 +8,8 @@
 -- Singular test: the fixture block 2025-02-14..2025-02-18 must be flagged
 -- exactly as expected. To expand the block, add a row to test_cases below
 -- (and the matching fixture rows). Each case is (activity_date, expected
--- gap type with steps included, expected gap type with steps excluded),
--- so the test passes in both var modes:
+-- gap types with steps checked, expected gap types with steps unchecked),
+-- so the test passes in both check modes:
 -- 2025-02-14: steps + sleep present
 -- 2025-02-15: steps only
 -- 2025-02-16: sleep only
@@ -23,21 +23,21 @@
 -- every window date flagged steps/both, none flagged none.
 
 {% set test_cases = [
-    ('2025-02-14', 'none', 'none'),
-    ('2025-02-15', 'sleep', 'sleep'),
-    ('2025-02-16', 'steps', 'none'),
-    ('2025-02-17', 'both', 'sleep'),
-    ('2025-02-18', 'none', 'none'),
+    ('2025-02-14', '[]', '[]'),
+    ('2025-02-15', "['sleep']", "['sleep']"),
+    ('2025-02-16', "['steps']", '[]'),
+    ('2025-02-17', "['steps', 'sleep']", "['sleep']"),
+    ('2025-02-18', '[]', '[]'),
 ] %}
-{% set include_steps = var('health_gaps_include_steps', false) %}
+{% set include_steps = 'steps' in var('health_gap_checks', ['sleep']) %}
 
 with expected as (
 
-    {% for activity_date, gap_type_on, gap_type_off in test_cases %}
+    {% for activity_date, gap_types_on, gap_types_off in test_cases %}
     select
         cast('{{ activity_date }}' as date) as activity_date,
-        '{{ gap_type_on if include_steps else gap_type_off }}'
-            as expected_gap_type
+        {{ gap_types_on if include_steps else gap_types_off }}
+            as expected_gap_types
     {% if not loop.last %}
     union all
     {% endif %}
@@ -47,12 +47,12 @@ with expected as (
 
 select
     expected.activity_date,
-    actual.gap_type as actual_gap_type,
-    expected.expected_gap_type
+    actual.gap_types as actual_gap_types,
+    expected.expected_gap_types
 from
     expected
 left join {{ ref('fct_health_data_gaps', v=1) }} as actual
     on expected.activity_date = actual.activity_date
 where
     actual.activity_date is null
-    or actual.gap_type <> expected.expected_gap_type
+    or actual.gap_types <> expected.expected_gap_types

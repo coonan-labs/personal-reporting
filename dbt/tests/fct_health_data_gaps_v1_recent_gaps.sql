@@ -14,7 +14,7 @@
 
 select
     activity_date,
-    gap_type
+    gap_types
 from
     {{ ref('fct_health_data_gaps', v=1) }}
 where

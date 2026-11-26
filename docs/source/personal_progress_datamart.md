@@ -259,11 +259,12 @@ missing steps and/or sleep data so sync gaps are visible instead of silent.
 | `step_count` | int | measure, null when none |
 | `sleep_minutes` | numeric | measure, null when none |
 | `is_gap` | boolean | whether the date is missing data under the current check configuration |
-| `gap_type` | string | `steps` / `sleep` / `both` / `none` |
+| `gap_types` | array of string | gap types identified on the date (steps, sleep); empty when no gap |
 
 Notes:
-- The `health_gaps_include_steps` var excludes steps from gap detection when
-  false; `has_steps` / `step_count` are still reported for context.
+- The `health_gap_checks` var lists the sources checked (e.g. `[sleep]` or
+  `[sleep, steps]`); a source not listed is still reported for context via
+  `has_steps` / `step_count`.
 - A date counts as a gap for a source only once that source has started
   reporting; a source that has never reported falls back to the window start,
   so a total outage is flagged.

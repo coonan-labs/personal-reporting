@@ -78,7 +78,7 @@ Conformed dimensions (`dim_*_v1`) and facts (`fct_*_v1`) stored flat in `dbt/mod
 - `fct_habit_occurrence_v1`: One row per habit occurrence, completion resolved against `dim_habit`
 - `fct_engagement_v1`: One row per engagement-contact association with date/person/group keys
 - `fct_health_session_v1`: One row per sleep or exercise session (`session_kind` discriminator)
-- `fct_health_data_gaps_v1`: One row per calendar date flagging missing steps and/or sleep data (`gap_type` steps/sleep/both/none)
+- `fct_health_data_gaps_v1`: One row per calendar date flagging missing steps and/or sleep data (`gap_types` array of steps/sleep, empty when no gap)
 
 Model-level and column docs live in `dbt/models/marts/_mrt__properties.yml`.
 

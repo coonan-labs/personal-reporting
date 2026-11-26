@@ -1,0 +1,41 @@
+---
+version: 2
+macros:
+  - name: gap_types_array
+    description: Adapter-aware macro to build the array of identified health
+      gap types from per-source gap flag expressions. Returns [] when neither
+      source is missing, or the identified types (steps, sleep, or both).
+    arguments:
+      - name: steps_gap_expr
+        description: SQL expression that is true when steps are missing on the date.
+        type: string
+      - name: sleep_gap_expr
+        description: SQL expression that is true when sleep is missing on the date.
+        type: string
+  - name: bigquery__gap_types_array
+    description: BigQuery implementation of gap_types_array, dispatched via adapter.dispatch.
+    arguments:
+      - name: steps_gap_expr
+        description: SQL expression that is true when steps are missing on the date.
+        type: string
+      - name: sleep_gap_expr
+        description: SQL expression that is true when sleep is missing on the date.
+        type: string
+  - name: duckdb__gap_types_array
+    description: DuckDB implementation of gap_types_array, dispatched via adapter.dispatch.
+    arguments:
+      - name: steps_gap_expr
+        description: SQL expression that is true when steps are missing on the date.
+        type: string
+      - name: sleep_gap_expr
+        description: SQL expression that is true when sleep is missing on the date.
+        type: string
+  - name: databricks__gap_types_array
+    description: Databricks implementation of gap_types_array, dispatched via adapter.dispatch.
+    arguments:
+      - name: steps_gap_expr
+        description: SQL expression that is true when steps are missing on the date.
+        type: string
+      - name: sleep_gap_expr
+        description: SQL expression that is true when sleep is missing on the date.
+        type: string

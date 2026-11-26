@@ -5,10 +5,10 @@
 --          sync gaps are visible instead of silent. One row per calendar date
 --          in the observed window, with flags for each source and the gap type.
 --
---          Steps can be excluded from gap detection with the
---          health_gaps_include_steps variable (see #134). Steps data is
---          still reported for context when excluded; only the gap
---          determination ignores it.
+--          Which sources are checked is set by the health_gap_checks
+--          variable (see #134), a list such as [sleep] or [sleep, steps].
+--          A source's data is still reported for context when it is not
+--          checked; only the gap determination ignores it.
 --
 --          A date only counts as a gap for a source once that source has
 --          started reporting (its first observed date); earlier dates are
@@ -24,6 +24,9 @@
 -- civil/local date; the boundary can be off by a day for UTC+ time zones.
 {% set yesterday = run_started_at - modules.datetime.timedelta(days=1) %}
 {% set window_end_date = yesterday.strftime('%Y-%m-%d') %}
+{% set checks = var('health_gap_checks', ['sleep']) %}
+{% set steps_gap_expr = "steps_expected and not has_steps" if 'steps' in checks else "false" %}
+{% set sleep_gap_expr = "sleep_expected and not has_sleep" if 'sleep' in checks else "false" %}
 
 with
 -- Import CTEs: one per upstream model, selected as-is
@@ -136,19 +139,9 @@ gap_flags as (
         has_sleep,
         step_count,
         sleep_minutes,
-        {% if var('health_gaps_include_steps', false) %}
-        case
-            when steps_expected and not has_steps and sleep_expected and not has_sleep then 'both'
-            when steps_expected and not has_steps then 'steps'
-            when sleep_expected and not has_sleep then 'sleep'
-            else 'none'
-        end as gap_type
-        {% else %}
-        case
-            when sleep_expected and not has_sleep then 'sleep'
-            else 'none'
-        end as gap_type
-        {% endif %}
+        {{ steps_gap_expr }} as steps_gap,
+        {{ sleep_gap_expr }} as sleep_gap,
+        {{ gap_types_array(steps_gap_expr, sleep_gap_expr) }} as gap_types
     from
         date_coverage
 
@@ -162,8 +155,8 @@ final as (
         has_sleep,
         step_count,
         sleep_minutes,
-        gap_type <> 'none' as is_gap,
-        gap_type
+        steps_gap or sleep_gap as is_gap,
+        gap_types
     from
         gap_flags
 
