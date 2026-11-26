@@ -35,7 +35,7 @@ The convention applies to staging, core, intermediate, and marts. Union models a
 Models call `{{ source(source_name, relation_name) }}` directly; there is no `make_source` macro:
 
 - In mock (DuckDB) each source reads its test fixture via `config.external_location: dbt/test_fixtures/{source}/{identifier}.csv`.
-- In dev/test/prod (Databricks Unity Catalog) sources resolve to the raw schema
+- In dev-db/test-db/prod-db (Databricks Unity Catalog) sources resolve to the raw schema
   in catalog `workspace`.
 
 Consequence: fixture filenames under `dbt/test_fixtures/{source}/` must match the source identifiers in `_*sources.yml`.

@@ -13,7 +13,7 @@ BASE_DATE = "2020-01-01"
 SECRET_STORE = os.getenv("SECRET_STORE", default="1password")
 
 # Define target and schema names supplied by the environment, defaulting to local dev
-DBT_TARGET = os.getenv("DBT_TARGET") or "dev"
+DBT_TARGET = os.getenv("DBT_TARGET") or "dev-db"
 DBT_SCHEMA = os.getenv("DBT_SCHEMA") or "reporting_dev"
 RAW_SCHEMA = os.getenv("RAW_SCHEMA") or "raw_dev"
 

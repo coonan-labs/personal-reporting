@@ -22,10 +22,12 @@ credentialed values through the selected 1Password Environment, or configure
 | `mise run test-e2e` | Live API + Databricks tests |
 | `mise run test-all` | Unit tests followed by e2e tests |
 | `mise run pipeline -- notion [args]` | Run one dlt source |
+| `mise run pipeline-md -- notion [args]` | Run one dlt source into a MotherDuck target (no warehouse start) |
 | `mise run pipeline-all` | Run Notion, HubSpot, and Google Health |
 | `mise run dbt-build-mock` | Build/test dbt models with DuckDB fixtures |
-| `mise run dbt-build` | Build/test against `DBT_TARGET` (default `dev`) |
-| `mise run dbt-source-freshness` | Run source freshness against `DBT_TARGET` (default `dev`) |
+| `mise run dbt-build` | Build/test against `DBT_TARGET` (default `dev-db`) |
+| `mise run dbt-build-md` | Build/test against a MotherDuck `DBT_TARGET` (no warehouse start) |
+| `mise run dbt-source-freshness` | Run source freshness against `DBT_TARGET` (default `dev-db`) |
 | `mise run dbt -- run --target mock --select <model>` | Pass a dbt command through mise |
 | `mise run dbt-lint` | Lint SQL with dbt's built-in linter |
 | `mise run dbt-bouncer` | Run dbt-bouncer checks |
@@ -34,7 +36,7 @@ credentialed values through the selected 1Password Environment, or configure
 | `mise run coverage` | Print coverage and generate HTML |
 | `mise run clean` | Remove local test/build/documentation artifacts |
 
-`DBT_TARGET` defaults to `dev`, with matching `DBT_SCHEMA=reporting_dev` and
+`DBT_TARGET` defaults to `dev-db`, with matching `DBT_SCHEMA=reporting_dev` and
 `RAW_SCHEMA=raw_dev` defaults for local work. Set all three together when
 targeting another environment; the scheduled workflows set them explicitly on
 their run steps. The pipeline, `dbt-build`, and `dbt-source-freshness` tasks

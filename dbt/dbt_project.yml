@@ -51,6 +51,6 @@ vars:
   health_gap_checks: [sleep]
 
 # Databricks-specific configurations
-# These configs apply when targeting Databricks (dev/test/prod targets)
+# These configs apply when targeting Databricks (dev-db/test-db/prod-db targets)
 # BigQuery targets (dev-bq/test-bq/prod-bq) are retained
 # for easy rollback path

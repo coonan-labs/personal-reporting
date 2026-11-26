@@ -153,7 +153,7 @@ of concerns:
    mise run pipeline -- notion --full             # one dlt source
    mise run pipeline-all                          # all three dlt sources
    mise run dbt-build-mock                        # DuckDB fixture build
-   mise run dbt-build                             # starts SQL warehouse, uses DBT_TARGET (default dev)
+   mise run dbt-build                             # starts SQL warehouse, uses DBT_TARGET (default dev-db)
    mise run docs                                  # dbt + Sphinx documentation
    ```
 
@@ -163,7 +163,7 @@ of concerns:
    ```bash
    export GCP_PROJECT_ID=your-project-id
    export GOOGLE_APPLICATION_CREDENTIALS=/path/to/service/account/key.json
-   export DBT_TARGET=dev
+   export DBT_TARGET=dev-db
    export DBT_SCHEMA=reporting_dev
    export RAW_SCHEMA=raw_dev
    ```

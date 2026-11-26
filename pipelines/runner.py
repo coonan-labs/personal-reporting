@@ -6,13 +6,14 @@ and refresh execution are centralized.
 
 from __future__ import annotations
 
+import os
 from collections.abc import Callable
 from dataclasses import dataclass
 from logging import getLogger
 from typing import Any
 
 import dlt
-from dlt.destinations import databricks
+from dlt.destinations import databricks, motherduck
 
 from pipelines import DBT_SCHEMA, DBT_TARGET, RAW_SCHEMA, SECRET_STORE
 from pipelines.common.utils import (
@@ -85,6 +86,28 @@ def get_databricks_staging_volume(dataset_name: str) -> str:
     return f"{catalog}.{dataset_name}.staging"
 
 
+def get_destination() -> Any:
+    """Return the dlt destination for the current DBT_TARGET.
+
+    MotherDuck targets (``*-md``) load into the MotherDuck database named by
+    ``DESTINATION__MOTHERDUCK__CREDENTIALS__DATABASE`` (default
+    ``personal-muse``); the token comes from the ``MOTHERDUCK_TOKEN``
+    environment variable. All other ingestion targets use the Databricks
+    destination with a per-schema staging volume.
+    """
+    if DBT_TARGET.endswith("-md"):
+        return motherduck(
+            credentials={
+                "database": os.environ.get(
+                    "DESTINATION__MOTHERDUCK__CREDENTIALS__DATABASE", "personal-muse"
+                )
+            },
+        )
+    return databricks(
+        staging_volume_name=get_databricks_staging_volume(RAW_SCHEMA),
+    )
+
+
 def run_refresh(
     *,
     source_factory: Callable,
@@ -145,9 +168,7 @@ def run_refresh(
         pipeline = dlt.pipeline(
             pipeline_name=pipeline_name,
             dataset_name=RAW_SCHEMA,
-            destination=databricks(
-                staging_volume_name=get_databricks_staging_volume(RAW_SCHEMA),
-            ),
+            destination=get_destination(),
             progress=progress,
         )
 

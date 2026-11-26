@@ -3,7 +3,7 @@
 from unittest.mock import ANY, MagicMock, patch
 
 import pytest
-from dlt.destinations import databricks
+from dlt.destinations import databricks, motherduck
 
 from pipelines import RAW_SCHEMA
 from pipelines.run_pipeline import main, parse_select
@@ -204,9 +204,55 @@ def test_runner_supports_direct_token_skips_secret_validation(
         mock_validate.assert_not_called()
 
 
+@patch("pipelines.runner.dlt.secrets.get")
+@patch("pipelines.runner.dlt.pipeline")
+@patch("pipelines.runner.validate_required_secrets")
+def test_runner_refresh_pipeline_uses_motherduck_destination_for_md_target(
+    mock_validate, mock_dlt_pipeline, mock_dlt_secrets_get, monkeypatch
+):
+    """MotherDuck targets load via the motherduck destination, not Databricks."""
+    monkeypatch.setattr("pipelines.runner.DBT_TARGET", "dev-md")
+    monkeypatch.setattr("pipelines.runner.DBT_SCHEMA", "reporting_dev")
+    monkeypatch.setattr("pipelines.runner.RAW_SCHEMA", "raw_dev")
+
+    mock_pipeline_instance = MagicMock()
+    mock_dlt_pipeline.return_value = mock_pipeline_instance
+    mock_pipeline_instance.run.return_value = "Loaded 10 rows"
+
+    mock_notion_source = MagicMock()
+    mock_notion_source.with_resources.return_value = mock_notion_source
+
+    with patch.dict(
+        PIPELINE_CONFIG,
+        {
+            "notion": PIPELINE_CONFIG["notion"].__class__(
+                source_factory=MagicMock(return_value=mock_notion_source),
+                pipeline_name="notion_habits_pipeline",
+                display_name="Notion Habits",
+                required_secret_keys=["sources.notion.api_key"],
+                source_kwargs={"db_name": "Disciplines"},
+            )
+        },
+    ):
+        info = refresh_pipeline("notion", is_incremental=True)
+
+    assert info == "Loaded 10 rows"
+    mock_dlt_pipeline.assert_called_once_with(
+        pipeline_name="notion_habits_pipeline",
+        dataset_name="raw_dev",
+        destination=ANY,
+        progress="log",
+    )
+    destination = mock_dlt_pipeline.call_args.kwargs["destination"]
+    assert isinstance(destination, motherduck)
+    assert destination.config_params["credentials"] == {"database": "personal-muse"}
+    # The Databricks staging volume path must not run for MotherDuck targets.
+    mock_dlt_secrets_get.assert_not_called()
+
+
 def test_refresh_pipeline_rejects_target_schema_mismatch(monkeypatch):
     """Direct ingestion must not silently write schemas that disagree with the target."""
-    monkeypatch.setattr("pipelines.runner.DBT_TARGET", "prod")
+    monkeypatch.setattr("pipelines.runner.DBT_TARGET", "prod-db")
     monkeypatch.setattr("pipelines.runner.DBT_SCHEMA", "reporting_dev")
     monkeypatch.setattr("pipelines.runner.RAW_SCHEMA", "raw_dev")
 

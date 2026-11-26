@@ -3,16 +3,19 @@
 from __future__ import annotations
 
 TARGET_SCHEMAS = {
-    "dev": ("reporting_dev", "raw_dev"),
+    "dev-db": ("reporting_dev", "raw_dev"),
     "dev-bq": ("reporting_dev", "raw_dev"),
-    "test": ("reporting_test", "raw_test"),
+    "dev-md": ("reporting_dev", "raw_dev"),
+    "test-db": ("reporting_test", "raw_test"),
     "test-bq": ("reporting_test", "raw_test"),
-    "prod": ("reporting", "raw"),
+    "test-md": ("reporting_test", "raw_test"),
+    "prod-db": ("reporting", "raw"),
     "prod-bq": ("reporting", "raw"),
+    "prod-md": ("reporting", "raw"),
     "mock": ("reporting_dev", "raw_dev"),
 }
 
-INGESTION_TARGETS = {"dev", "test", "prod", "mock"}
+INGESTION_TARGETS = {"dev-db", "test-db", "prod-db", "dev-md", "test-md", "prod-md", "mock"}
 
 
 def validate_target(

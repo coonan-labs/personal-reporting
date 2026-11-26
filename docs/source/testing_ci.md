@@ -23,8 +23,8 @@ class completes and resets local dlt state in a `finally` block.
 ```bash
 mise run dbt-build-mock
 mise run dbt-build
-DBT_TARGET=prod DBT_SCHEMA=reporting RAW_SCHEMA=raw mise run dbt-source-freshness
-DBT_TARGET=prod DBT_SCHEMA=reporting RAW_SCHEMA=raw mise run dbt-build
+DBT_TARGET=prod-db DBT_SCHEMA=reporting RAW_SCHEMA=raw mise run dbt-source-freshness
+DBT_TARGET=prod-db DBT_SCHEMA=reporting RAW_SCHEMA=raw mise run dbt-build
 mise run dbt -- run --target mock --select stg_google_health__sleep
 mise run dbt -- test --target mock --select stg_google_health__sleep
 ```
@@ -84,7 +84,7 @@ to a CLI timeout plus a poll interval).
 Workflows are in `.github/workflows/`:
 
 - `refresh-notion.yml`, `refresh-hubspot.yml`, `refresh-google-health.yml` —
-  scheduled ingestion via `mise run pipeline` with `DBT_TARGET=prod`,
+  scheduled ingestion via `mise run pipeline` with `DBT_TARGET=prod-db`,
   `DBT_SCHEMA=reporting`, and `RAW_SCHEMA=raw` set on the run step.
 - `run-transforms.yml` — scheduled dbt source freshness and build via mise with
   the same production target and schema variables set on the run step.

@@ -5,7 +5,7 @@ opencode = "1.19.0"
 "databricks-cli" = "latest"
 
 [env]
-DBT_TARGET = "{% if env.DBT_TARGET %}{{ env.DBT_TARGET }}{% else %}dev{% endif %}"
+DBT_TARGET = "{% if env.DBT_TARGET %}{{ env.DBT_TARGET }}{% else %}dev-db{% endif %}"
 DBT_SCHEMA = "{% if env.DBT_SCHEMA %}{{ env.DBT_SCHEMA }}{% else %}reporting_dev{% endif %}"
 RAW_SCHEMA = "{% if env.RAW_SCHEMA %}{{ env.RAW_SCHEMA }}{% else %}raw_dev{% endif %}"
 DBT_PROJECT_DIR = "{{ config_root }}/dbt"
@@ -57,6 +57,12 @@ depends = ["validate-target", "databricks-start"]
 raw_args = true
 run = 'uv run python -m pipelines.run_pipeline'
 
+[tasks.pipeline-md]
+description = "Run a dlt pipeline by source name into a MotherDuck target (no warehouse start)"
+depends = ["validate-target"]
+raw_args = true
+run = 'uv run python -m pipelines.run_pipeline'
+
 [tasks.pipeline-all]
 description = "Run all dlt pipelines"
 run = [
@@ -93,6 +99,12 @@ run = "uv run dbt build --project-dir . --profiles-dir . --target mock --vars '{
 [tasks.dbt-build]
 description = "Build dbt models and tests against DBT_TARGET (starts the Databricks warehouse)"
 depends = ["validate-target", "databricks-start"]
+raw_args = true
+run = "uv run dbt build"
+
+[tasks.dbt-build-md]
+description = "Build dbt models and tests against a MotherDuck DBT_TARGET (no warehouse start)"
+depends = ["validate-target"]
 raw_args = true
 run = "uv run dbt build"
 
