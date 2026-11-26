@@ -1,0 +1,104 @@
+name: test motherduck load (dev-md)
+on:
+  workflow_dispatch:
+    inputs:
+      force_full_refresh:
+        description: 'Force full refresh'
+        required: false
+        default: 'true'
+        type: boolean
+
+permissions:
+  contents: read
+
+jobs:
+  run-pipelines:
+    runs-on: ubuntu-latest
+    env:
+      MISE_ENABLE_TOOLS: uv,python
+    steps:
+      - name: checkout code
+        uses: actions/checkout@v5
+
+      - name: set up mise and project tools
+        uses: jdx/mise-action@v4
+
+      - name: install project dependencies
+        run: mise run setup
+
+      - name: install 1Password CLI
+        uses: 1password/install-cli-action@v4
+        with:
+          version: latest
+
+      - name: run notion pipeline (dev-md)
+        env:
+          OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
+          OP_ENVIRONMENT_ID: ${{ vars.OP_ENVIRONMENT_ID }}
+          DBT_TARGET: dev-md
+          DBT_SCHEMA: reporting_dev
+          RAW_SCHEMA: raw_dev
+          FORCE_FULL_REFRESH: ${{ inputs.force_full_refresh }}
+          RUNTIME__LOG_LEVEL: 'INFO'
+          PYTHONUNBUFFERED: '1'
+        run: |
+          if [ "${{ inputs.force_full_refresh }}" = "true" ]; then
+            op run --environment "$OP_ENVIRONMENT_ID" -- env DBT_TARGET="$DBT_TARGET" DBT_SCHEMA="$DBT_SCHEMA" RAW_SCHEMA="$RAW_SCHEMA" mise run pipeline-md -- notion --full
+          else
+            op run --environment "$OP_ENVIRONMENT_ID" -- env DBT_TARGET="$DBT_TARGET" DBT_SCHEMA="$DBT_SCHEMA" RAW_SCHEMA="$RAW_SCHEMA" mise run pipeline-md -- notion
+          fi
+
+      - name: run hubspot pipeline (dev-md)
+        env:
+          OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
+          OP_ENVIRONMENT_ID: ${{ vars.OP_ENVIRONMENT_ID }}
+          DBT_TARGET: dev-md
+          DBT_SCHEMA: reporting_dev
+          RAW_SCHEMA: raw_dev
+          FORCE_FULL_REFRESH: ${{ inputs.force_full_refresh }}
+          RUNTIME__LOG_LEVEL: 'INFO'
+          PYTHONUNBUFFERED: '1'
+        run: |
+          if [ "${{ inputs.force_full_refresh }}" = "true" ]; then
+            op run --environment "$OP_ENVIRONMENT_ID" -- env DBT_TARGET="$DBT_TARGET" DBT_SCHEMA="$DBT_SCHEMA" RAW_SCHEMA="$RAW_SCHEMA" mise run pipeline-md -- hubspot --full
+          else
+            op run --environment "$OP_ENVIRONMENT_ID" -- env DBT_TARGET="$DBT_TARGET" DBT_SCHEMA="$DBT_SCHEMA" RAW_SCHEMA="$RAW_SCHEMA" mise run pipeline-md -- hubspot
+          fi
+
+      - name: run google health pipeline (dev-md)
+        env:
+          OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
+          OP_ENVIRONMENT_ID: ${{ vars.OP_ENVIRONMENT_ID }}
+          DBT_TARGET: dev-md
+          DBT_SCHEMA: reporting_dev
+          RAW_SCHEMA: raw_dev
+          FORCE_FULL_REFRESH: ${{ inputs.force_full_refresh }}
+          RUNTIME__LOG_LEVEL: 'INFO'
+          PYTHONUNBUFFERED: '1'
+        run: |
+          if [ "${{ inputs.force_full_refresh }}" = "true" ]; then
+            op run --environment "$OP_ENVIRONMENT_ID" -- env DBT_TARGET="$DBT_TARGET" DBT_SCHEMA="$DBT_SCHEMA" RAW_SCHEMA="$RAW_SCHEMA" mise run pipeline-md -- google_health --full
+          else
+            op run --environment "$OP_ENVIRONMENT_ID" -- env DBT_TARGET="$DBT_TARGET" DBT_SCHEMA="$DBT_SCHEMA" RAW_SCHEMA="$RAW_SCHEMA" mise run pipeline-md -- google_health
+          fi
+
+      - name: build dbt models (dev-md)
+        env:
+          OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
+          OP_ENVIRONMENT_ID: ${{ vars.OP_ENVIRONMENT_ID }}
+          DBT_TARGET: dev-md
+          DBT_SCHEMA: reporting_dev
+          RAW_SCHEMA: raw_dev
+          RUNTIME__LOG_LEVEL: 'INFO'
+          PYTHONUNBUFFERED: '1'
+        run: |
+          op run --environment "$OP_ENVIRONMENT_ID" -- env DBT_TARGET="$DBT_TARGET" DBT_SCHEMA="$DBT_SCHEMA" RAW_SCHEMA="$RAW_SCHEMA" mise run dbt-build-md
+
+      - name: upload dlt state files
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: motherduck-test-pipeline-state
+          path: |
+            ~/.dlt/**/state.json
+          retention-days: 7

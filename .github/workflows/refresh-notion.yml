@@ -37,7 +37,7 @@ jobs:
         env:
           OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
           OP_ENVIRONMENT_ID: ${{ vars.OP_ENVIRONMENT_ID }}
-          DBT_TARGET: prod
+          DBT_TARGET: prod-db
           DBT_SCHEMA: reporting
           RAW_SCHEMA: raw
           FORCE_FULL_REFRESH: ${{ inputs.force_full_refresh }}

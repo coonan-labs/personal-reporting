@@ -39,6 +39,7 @@ jobs:
 
       - name: run local build (mock target with CSV fixtures)
         run: mise run dbt-build-mock
+
       - name: run local build with steps in gap detection (mock target)
         run: mise run dbt-build-mock-steps
 
@@ -53,7 +54,7 @@ jobs:
         env:
           OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
           OP_ENVIRONMENT_ID: ${{ vars.OP_ENVIRONMENT_ID }}
-          DBT_TARGET: test
+          DBT_TARGET: test-db
           DBT_SCHEMA: reporting_test
           RAW_SCHEMA: raw_test
         run: op run --environment "$OP_ENVIRONMENT_ID" -- env DBT_TARGET="$DBT_TARGET" DBT_SCHEMA="$DBT_SCHEMA" RAW_SCHEMA="$RAW_SCHEMA" mise run dbt-build
