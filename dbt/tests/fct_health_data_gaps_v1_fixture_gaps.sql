@@ -7,9 +7,10 @@
 
 -- Singular test: the fixture block 2025-02-14..2025-02-18 must be flagged
 -- exactly as expected. To expand the block, add a row to test_cases below
--- (and the matching fixture rows). Each case is (activity_date, expected
--- gap types with steps checked, expected gap types with steps unchecked),
--- so the test passes in both check modes:
+-- (and the matching fixture rows). Each case is (activity_date, steps data
+-- present, sleep data present); the expected gap types are derived from
+-- which sources the health_gap_checks list enables, so the test passes in
+-- every check mode ([sleep], [steps], [sleep, steps]):
 -- 2025-02-14: steps + sleep present
 -- 2025-02-15: steps only
 -- 2025-02-16: sleep only
@@ -23,21 +24,23 @@
 -- every window date flagged steps/both, none flagged none.
 
 {% set test_cases = [
-    ('2025-02-14', '[]', '[]'),
-    ('2025-02-15', "['sleep']", "['sleep']"),
-    ('2025-02-16', "['steps']", '[]'),
-    ('2025-02-17', "['steps', 'sleep']", "['sleep']"),
-    ('2025-02-18', '[]', '[]'),
+    ('2025-02-14', true, true),
+    ('2025-02-15', true, false),
+    ('2025-02-16', false, true),
+    ('2025-02-17', false, false),
+    ('2025-02-18', true, true),
 ] %}
-{% set include_steps = 'steps' in var('health_gap_checks', ['sleep']) %}
+{% set checks = var('health_gap_checks', ['sleep']) %}
+{% set include_steps = 'steps' in checks %}
+{% set include_sleep = 'sleep' in checks %}
 
 with expected as (
 
-    {% for activity_date, gap_types_on, gap_types_off in test_cases %}
+    {% for activity_date, has_steps_data, has_sleep_data in test_cases %}
+    {% set expected_types = (["'steps'"] if include_steps and not has_steps_data else []) + (["'sleep'"] if include_sleep and not has_sleep_data else []) %}
     select
         cast('{{ activity_date }}' as date) as activity_date,
-        {{ gap_types_on if include_steps else gap_types_off }}
-            as expected_gap_types
+        [{{ expected_types | join(', ') }}] as expected_gap_types
     {% if not loop.last %}
     union all
     {% endif %}

@@ -313,6 +313,36 @@ def test_export_table_preserved_rows_drop_unknown_columns(tmp_path):
     assert len(written) == 6
 
 
+def test_health_gap_fixture_block_is_gapfix_sourced():
+    """Every row in the 2025-02-14..18 gap fixture block survives regeneration.
+
+    export_mock_seeds only preserves rows whose _dlt_id starts with GAPFIX-;
+    a sampled row in the block would vanish on the next regeneration and
+    break the fixture-gaps dbt test.
+    """
+    fixtures = resolve_project_root() / "dbt" / "test_fixtures" / "google_health"
+    block = {datetime.date(2025, 2, day).isoformat() for day in range(14, 19)}
+
+    with open(fixtures / "google_health__steps.csv", newline="", encoding="utf-8") as f:
+        step_rows = [
+            row
+            for row in csv.DictReader(f)
+            if datetime.date(
+                int(row["steps__interval__civil_start_time__date__year"]),
+                int(row["steps__interval__civil_start_time__date__month"]),
+                int(row["steps__interval__civil_start_time__date__day"]),
+            ).isoformat()
+            in block
+        ]
+    with open(fixtures / "google_health__sleep.csv", newline="", encoding="utf-8") as f:
+        sleep_rows = [
+            row for row in csv.DictReader(f) if row["sleep__interval__start_time"][:10] in block
+        ]
+    assert step_rows, "fixture block has no steps rows"
+    assert sleep_rows, "fixture block has no sleep rows"
+    assert all(row["_dlt_id"].startswith("GAPFIX-") for row in step_rows + sleep_rows)
+
+
 def test_export_table_returns_none_when_table_is_empty(tmp_path):
     client = _FakeClient({"hubspot__contacts": []})
 
