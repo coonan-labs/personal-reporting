@@ -239,6 +239,110 @@ def test_export_table_samples_scrubs_and_writes_csv(tmp_path):
     assert rows[0]["meta"] == '{"source": "web", "score": 3}'
 
 
+def test_export_table_preserves_hand_maintained_rows(tmp_path):
+    """Regeneration keeps GAPFIX-* rows and drops stale sampled rows."""
+    out_dir = tmp_path / "mock_sources"
+    target = out_dir / "hubspot" / "hubspot__contacts.csv"
+    target.parent.mkdir(parents=True)
+    with open(target, "w", newline="", encoding="utf-8") as f:
+        writer = csv.DictWriter(f, fieldnames=["id", "properties__email", "_dlt_id"])
+        writer.writeheader()
+        writer.writerow(
+            {"id": "9", "properties__email": "kept@example.com", "_dlt_id": "GAPFIX-TEST-1"}
+        )
+        writer.writerow({"id": "8", "properties__email": "stale@example.com", "_dlt_id": "old-row"})
+    rows = _sample_rows()
+    for i, row in enumerate(rows):
+        row["_dlt_id"] = f"sample-{i}"
+    client = _FakeClient({"hubspot__contacts": rows})
+
+    result = export_mock_seeds.export_table(
+        client,
+        "hubspot",
+        "hubspot__contacts",
+        project_id="test-project",
+        raw_dataset="raw_test",
+        sample_rows=5,
+        output_dir=out_dir,
+    )
+
+    with open(result, newline="", encoding="utf-8") as f:
+        written = list(csv.DictReader(f))
+    written_ids = {row["_dlt_id"] for row in written}
+    assert "GAPFIX-TEST-1" in written_ids
+    assert "old-row" not in written_ids
+    assert len(written) == 6
+
+
+def test_export_table_preserved_rows_drop_unknown_columns(tmp_path):
+    """A GAPFIX row with a column BigQuery dropped no longer breaks the write."""
+    out_dir = tmp_path / "mock_sources"
+    target = out_dir / "hubspot" / "hubspot__contacts.csv"
+    target.parent.mkdir(parents=True)
+    with open(target, "w", newline="", encoding="utf-8") as f:
+        writer = csv.DictWriter(f, fieldnames=["id", "properties__email", "_dlt_id", "legacy_col"])
+        writer.writeheader()
+        writer.writerow(
+            {
+                "id": "9",
+                "properties__email": "kept@example.com",
+                "_dlt_id": "GAPFIX-TEST-2",
+                "legacy_col": "gone",
+            }
+        )
+    rows = _sample_rows()
+    for i, row in enumerate(rows):
+        row["_dlt_id"] = f"sample-{i}"
+    client = _FakeClient({"hubspot__contacts": rows})
+
+    result = export_mock_seeds.export_table(
+        client,
+        "hubspot",
+        "hubspot__contacts",
+        project_id="test-project",
+        raw_dataset="raw_test",
+        sample_rows=5,
+        output_dir=out_dir,
+    )
+
+    with open(result, newline="", encoding="utf-8") as f:
+        written = list(csv.DictReader(f))
+    written_ids = {row["_dlt_id"] for row in written}
+    assert "GAPFIX-TEST-2" in written_ids
+    assert "legacy_col" not in written[0]
+    assert len(written) == 6
+
+
+def test_health_gap_fixture_block_is_gapfix_sourced():
+    """Every row in the 2025-02-14..18 gap fixture block survives regeneration.
+
+    export_mock_seeds only preserves rows whose _dlt_id starts with GAPFIX-;
+    a sampled row in the block would vanish on the next regeneration and
+    break the fixture-gaps dbt test.
+    """
+    fixtures = resolve_project_root() / "dbt" / "test_fixtures" / "google_health"
+    block = {datetime.date(2025, 2, day).isoformat() for day in range(14, 19)}
+
+    with open(fixtures / "google_health__steps.csv", newline="", encoding="utf-8") as f:
+        step_rows = [
+            row
+            for row in csv.DictReader(f)
+            if datetime.date(
+                int(row["steps__interval__civil_start_time__date__year"]),
+                int(row["steps__interval__civil_start_time__date__month"]),
+                int(row["steps__interval__civil_start_time__date__day"]),
+            ).isoformat()
+            in block
+        ]
+    with open(fixtures / "google_health__sleep.csv", newline="", encoding="utf-8") as f:
+        sleep_rows = [
+            row for row in csv.DictReader(f) if row["sleep__interval__start_time"][:10] in block
+        ]
+    assert step_rows, "fixture block has no steps rows"
+    assert sleep_rows, "fixture block has no sleep rows"
+    assert all(row["_dlt_id"].startswith("GAPFIX-") for row in step_rows + sleep_rows)
+
+
 def test_export_table_returns_none_when_table_is_empty(tmp_path):
     client = _FakeClient({"hubspot__contacts": []})
 

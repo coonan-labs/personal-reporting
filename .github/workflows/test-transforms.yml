@@ -39,6 +39,8 @@ jobs:
 
       - name: run local build (mock target with CSV fixtures)
         run: mise run dbt-build-mock
+      - name: run local build with steps in gap detection (mock target)
+        run: mise run dbt-build-mock-steps
 
       - name: install 1Password CLI
         if: github.actor != 'dependabot[bot]'

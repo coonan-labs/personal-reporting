@@ -486,3 +486,57 @@ models:
       - name: provider
         description: Source system that recorded the session.
         data_type: string
+  - name: fct_health_data_gaps
+    description: >
+      Health data gaps fact, one row per calendar date in the observed window
+      flagging dates with missing steps and/or sleep data. Which sources
+      count toward gap detection is set by the health_gap_checks variable
+      (see #134).
+    versions:
+      - v: 1
+        defined_in: fct_health_data_gaps_v1
+        description: >
+          Health data gaps fact, one row per calendar date in the observed
+          window flagging dates with missing steps and/or sleep data.
+    constraints:
+      - type: primary_key
+        warn_unenforced: false
+        columns:
+          - activity_date
+    columns:
+      - name: activity_date
+        description: Calendar date (local) the coverage row describes.
+        data_type: date
+        data_tests:
+          - unique
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_date', v=1)
+                field: date_day
+        constraints:
+          - type: not_null
+      - name: has_steps
+        description: Whether any step intervals were recorded on the date.
+        data_type: boolean
+      - name: has_sleep
+        description: Whether any sleep session starts on the date.
+        data_type: boolean
+      - name: step_count
+        description: Total steps recorded on the date, null when none.
+        data_type: bigint
+      - name: sleep_minutes
+        description: Total sleep minutes starting on the date, null when none.
+        data_type: numeric(38, 9)
+      - name: is_gap
+        description: >
+          Whether the date is missing steps and/or sleep data under the
+          current check configuration.
+        data_type: boolean
+      - name: gap_types
+        description: >
+          Which sources are missing on the date, as an array of the gap
+          types identified (steps and/or sleep); empty when there is no
+          gap. Which sources are checked is set by the
+          health_gap_checks variable.
+        data_type: "{{ 'varchar[]' if target.type == 'duckdb' else 'array<string>' }}"

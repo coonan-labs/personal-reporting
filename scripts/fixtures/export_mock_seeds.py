@@ -187,6 +187,27 @@ def write_seed_csv(
     return out_file
 
 
+HAND_MAINTAINED_ID_PREFIX = "GAPFIX-"
+
+
+def read_hand_maintained_rows(out_file: Path) -> list[dict[str, Any]]:
+    """Read hand-maintained rows from an existing seed CSV.
+
+    Rows whose ``_dlt_id`` starts with ``GAPFIX-`` are crafted by hand for
+    dbt fixture tests (e.g. the 2025-02-14..18 gap block); regeneration
+    rewrites the file from a fresh BigQuery sample, so these rows are
+    re-appended by :func:`export_table` instead of being wiped.
+    """
+    if not out_file.exists():
+        return []
+    with open(out_file, newline="", encoding="utf-8") as csvfile:
+        return [
+            row
+            for row in csv.DictReader(csvfile)
+            if str(row.get("_dlt_id", "")).startswith(HAND_MAINTAINED_ID_PREFIX)
+        ]
+
+
 def export_table(
     client: Any,
     source_name: str,
@@ -230,7 +251,21 @@ def export_table(
     for row in results:
         normalize_row_values(row)
 
-    return write_seed_csv(results, out_dir / source_name / f"{identifier}.csv", dry_run=dry_run)
+    out_file = out_dir / source_name / f"{identifier}.csv"
+    if not dry_run:
+        # Preserve hand-maintained rows (GAPFIX-*) from the previous seed
+        # file; regeneration would otherwise wipe them. Intersect with the
+        # fresh sample's columns: if BigQuery dropped a column a hand row
+        # still has, DictWriter would otherwise raise on the extra key.
+        kept_ids = {str(row.get("_dlt_id", "")) for row in results}
+        fieldnames = set(results[0].keys())
+        results = results + [
+            {key: value for key, value in row.items() if key in fieldnames}
+            for row in read_hand_maintained_rows(out_file)
+            if str(row.get("_dlt_id", "")) not in kept_ids
+        ]
+
+    return write_seed_csv(results, out_file, dry_run=dry_run)
 
 
 def export_all(
