@@ -15,6 +15,11 @@ on:
           - dev-db
           - test-db
           - prod-db
+      confirm_prod:
+        description: 'Required for prod-* targets: type the target name to confirm a production full refresh'
+        required: false
+        default: ''
+        type: string
 
 permissions:
   contents: read
@@ -40,36 +45,27 @@ jobs:
       - name: install project dependencies
         run: uv sync
 
+      - name: install dbt dependencies
+        run: mise run dbt-deps
+
       - name: install 1Password CLI
         uses: 1password/install-cli-action@v4
         with:
           version: latest
 
-      # Map the chosen target to its schemas. This mirrors TARGET_SCHEMAS in
-      # pipelines/targets.py; the validate step rejects a mismatch if the two
-      # ever drift apart.
       - name: set target schemas
-        run: |
-          case "$DBT_TARGET" in
-            dev-md|dev-db) DBT_SCHEMA=reporting_dev; RAW_SCHEMA=raw_dev ;;
-            test-md|test-db) DBT_SCHEMA=reporting_test; RAW_SCHEMA=raw_test ;;
-            prod-md|prod-db) DBT_SCHEMA=reporting; RAW_SCHEMA=raw ;;
-            *) echo "Unsupported target: $DBT_TARGET (BigQuery targets are excluded)" >&2; exit 1 ;;
-          esac
-          {
-            echo "DBT_SCHEMA=$DBT_SCHEMA"
-            echo "RAW_SCHEMA=$RAW_SCHEMA"
-          } >> "$GITHUB_ENV"
+        run: uv run python scripts/target_schemas.py "$DBT_TARGET" >> "$GITHUB_ENV"
 
       - name: validate target
         run: uv run python scripts/validate_target.py
 
-      - name: start databricks warehouse
-        if: endsWith(inputs.target, '-db')
-        env:
-          OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
-          OP_ENVIRONMENT_ID: ${{ vars.OP_ENVIRONMENT_ID }}
-        run: op run --environment "$OP_ENVIRONMENT_ID" -- uv run python scripts/databricks_warehouse.py
+      - name: guard production full refresh
+        if: startsWith(inputs.target, 'prod-')
+        run: |
+          if [ "${{ inputs.confirm_prod }}" != "${{ inputs.target }}" ]; then
+            echo "Refusing production full refresh: set confirm_prod to '${{ inputs.target }}'." >&2
+            exit 1
+          fi
 
       - name: run notion pipeline (${{ inputs.target }})
         env:
@@ -78,7 +74,7 @@ jobs:
         run: |
           op run --environment "$OP_ENVIRONMENT_ID" -- \
             env DBT_TARGET="$DBT_TARGET" DBT_SCHEMA="$DBT_SCHEMA" RAW_SCHEMA="$RAW_SCHEMA" \
-            uv run python -m pipelines.run_pipeline notion --full
+            mise run pipeline -- notion --full
 
       - name: run hubspot pipeline (${{ inputs.target }})
         env:
@@ -87,7 +83,7 @@ jobs:
         run: |
           op run --environment "$OP_ENVIRONMENT_ID" -- \
             env DBT_TARGET="$DBT_TARGET" DBT_SCHEMA="$DBT_SCHEMA" RAW_SCHEMA="$RAW_SCHEMA" \
-            uv run python -m pipelines.run_pipeline hubspot --full
+            mise run pipeline -- hubspot --full
 
       - name: run google health pipeline (${{ inputs.target }})
         env:
@@ -96,7 +92,7 @@ jobs:
         run: |
           op run --environment "$OP_ENVIRONMENT_ID" -- \
             env DBT_TARGET="$DBT_TARGET" DBT_SCHEMA="$DBT_SCHEMA" RAW_SCHEMA="$RAW_SCHEMA" \
-            uv run python -m pipelines.run_pipeline google_health --full
+            mise run pipeline -- google_health --full
 
       - name: build dbt models (${{ inputs.target }})
         env:
@@ -105,7 +101,7 @@ jobs:
         run: |
           op run --environment "$OP_ENVIRONMENT_ID" -- \
             env DBT_TARGET="$DBT_TARGET" DBT_SCHEMA="$DBT_SCHEMA" RAW_SCHEMA="$RAW_SCHEMA" \
-            uv run dbt build --project-dir dbt --profiles-dir dbt --target "$DBT_TARGET"
+            mise run dbt-build
 
       # dlt state is uploaded for debugging only and is never restored: this
       # workflow always does a full refresh, which does not need prior state.

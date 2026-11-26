@@ -1,23 +1,23 @@
 # Personal Reporting Pipelines - AI Agent Context
 
 ## Project Overview
-Personal data integration and analytics platform tracking personal disciplines/habits across three sources. Uses dlt for extraction into Databricks (Unity Catalog) and dbt for transformation.
+Personal data integration and analytics platform tracking personal disciplines/habits across three sources. Uses dlt for extraction into MotherDuck (with Databricks Unity Catalog retained for the transition) and dbt for transformation.
 
 ## Architecture
 ```
 Notion / HubSpot / Google Health APIs
-    ↓ (dlt pipelines → Databricks raw schema / Unity Catalog)
+    ↓ (dlt pipelines → MotherDuck raw schema; Databricks retained for transition)
 dbt Staging (views) → dbt Intermediate → dbt Marts (tables)
     ↓ MetricFlow semantic layer
 ```
 
 ## Target Configuration
-**Primary target**: Databricks Unity Catalog (`dev-db`, `test-db`, `prod-db` targets)
-**MotherDuck targets**: (`dev-md`, `test-md`, `prod-md` targets) — primary path after the #145 migration
+**Primary target**: MotherDuck (`dev-md`, `test-md`, `prod-md` targets) — primary path after the #145 migration
+**Transition/retained target**: Databricks Unity Catalog (`dev-db`, `test-db`, `prod-db` targets)
 **Rollback targets**: BigQuery (`dev-bq`, `test-bq`, `prod-bq` targets) — retained for easy rollback path
 **Local development**: DuckDB (`mock` target) with CSV test fixtures
 
-Default target is `dev-db` (Databricks). MotherDuck targets (`dev-md`/`test-md`/`prod-md`) use `DESTINATION__MOTHERDUCK__CREDENTIALS__DATABASE` (default `personal`; a bare database name, no `md:` prefix) and `MOTHERDUCK_TOKEN`. Use `DBT_TARGET` to select the target and set the matching `DBT_SCHEMA` / `RAW_SCHEMA`; local defaults are `reporting_dev` / `raw_dev`.
+Default target is `dev-md` (MotherDuck). MotherDuck targets (`dev-md`/`test-md`/`prod-md`) use `DESTINATION__MOTHERDUCK__CREDENTIALS__DATABASE` (default `personal`; bare names are preferred and `md:`/`md://` prefixes are normalized) and `MOTHERDUCK_TOKEN`. Use `DBT_TARGET` to select the target and set the matching `DBT_SCHEMA` / `RAW_SCHEMA`; local defaults are `reporting_dev` / `raw_dev`.
 
 ## GitHub Agentic Workflows (gh-aw)
 Scheduled AI-driven automation uses [gh-aw](https://github.com/github/gh-aw). Each workflow is a `.md` source file (frontmatter + agent prompt) compiled to a `.lock.yml` GitHub Actions file. Engine for this project: **Gemini** (`GEMINI_API_KEY` secret required).
@@ -41,7 +41,7 @@ Current agentic workflow: `weekly-doc-updater` — runs every Monday, opens a PR
 
 ## Source Resolution (no make_source macro)
 There is no `make_source` macro. Models call `{{ source(source_name, relation_name) }}` directly for every target:
-- **mock (DuckDB)**: each source reads its test fixture via `config.external_location: dbt/test_fixtures/{source}/{identifier}.csv`.
+- **mock (DuckDB)**: each source reads its test fixture via `config.external_location: test_fixtures/{source}/{identifier}.csv` (relative to the dbt project).
 - **dev-db/test-db/prod-db (Databricks)**: sources resolve to the raw schema in Unity Catalog.
 - **dev-md/test-md/prod-md (MotherDuck)**: sources resolve to the raw schema in the MotherDuck database named by `DESTINATION__MOTHERDUCK__CREDENTIALS__DATABASE` (default `personal`).
 - **dev-bq/test-bq/prod-bq (BigQuery)**: sources resolve to the raw schema (rollback path).
@@ -143,7 +143,7 @@ Note: habit completions and thresholds come from the Notion habit reference data
 - `mise run pipeline -- <notion|hubspot|google_health> [args]` — run one dlt pipeline with a 1Password Environment
 - `mise run dbt-build-mock` — local dbt build (DuckDB + CSV test fixtures)
 - `mise run dbt -- run --target mock --select <model>` — run a specific dbt model
-- `mise run dbt-build` — build against `DBT_TARGET` (defaults to `dev-db`) after starting the SQL warehouse
+- `mise run dbt-build` — build against `DBT_TARGET` (defaults to `dev-md`); the SQL warehouse starts only for `*-db` targets
 - `mise run dbt-source-freshness` — run dbt source freshness against `DBT_TARGET`
 - `mise run dbt-lint` — SQL linting with the dbt 2.x Rust parser and real dbt templating; reuses `dbt/.sqlfluff`. The `sqlfluff`/`sqlfluff-templater-dbt` PyPI packages are not installed because `sqlfluff-templater-dbt` requires Python `dbt-core` and cannot coexist with dbt 2.x, while standalone sqlfluff cannot resolve package macros.
 - `mise run docs` — dbt docs site (v2 SPA) + Sphinx docs

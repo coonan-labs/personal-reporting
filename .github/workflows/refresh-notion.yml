@@ -15,7 +15,7 @@ on:
       force_full_refresh:
         description: 'Force full refresh'
         required: false
-        default: 'false'
+        default: false
         type: boolean
 
 permissions:
@@ -48,19 +48,13 @@ jobs:
           DBT_TARGET: ${{ inputs.target || 'prod-md' }}
           DBT_SCHEMA: reporting
           RAW_SCHEMA: raw
-          FORCE_FULL_REFRESH: ${{ inputs.force_full_refresh }}
           RUNTIME__LOG_LEVEL: 'INFO'
           PYTHONUNBUFFERED: '1'
         run: |
-          if [ "$DBT_TARGET" = "prod-md" ]; then
-            pipeline_task=pipeline-md
-          else
-            pipeline_task=pipeline
-          fi
           if [ "${{ inputs.force_full_refresh }}" = "true" ]; then
-            op run --environment "$OP_ENVIRONMENT_ID" -- env DBT_TARGET="$DBT_TARGET" DBT_SCHEMA="$DBT_SCHEMA" RAW_SCHEMA="$RAW_SCHEMA" mise run "$pipeline_task" -- notion --full
+            op run --environment "$OP_ENVIRONMENT_ID" -- env DBT_TARGET="$DBT_TARGET" DBT_SCHEMA="$DBT_SCHEMA" RAW_SCHEMA="$RAW_SCHEMA" mise run pipeline -- notion --full
           else
-            op run --environment "$OP_ENVIRONMENT_ID" -- env DBT_TARGET="$DBT_TARGET" DBT_SCHEMA="$DBT_SCHEMA" RAW_SCHEMA="$RAW_SCHEMA" mise run "$pipeline_task" -- notion
+            op run --environment "$OP_ENVIRONMENT_ID" -- env DBT_TARGET="$DBT_TARGET" DBT_SCHEMA="$DBT_SCHEMA" RAW_SCHEMA="$RAW_SCHEMA" mise run pipeline -- notion
           fi
 
       - name: upload dlt state files

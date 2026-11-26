@@ -20,18 +20,17 @@ anchors:
     keyfile: "{{ env_var('GOOGLE_APPLICATION_CREDENTIALS') }}"
   # MotherDuck configuration (dbt-duckdb adapter, md: connection string).
   # Database from DESTINATION__MOTHERDUCK__CREDENTIALS__DATABASE (default
-  # personal). The value must be a bare database name; a leading `md:`
-  # prefix is stripped below because both dlt and dbt already prefix it
-  # when connecting. Token from MOTHERDUCK_TOKEN; both are required for
-  # the -md targets to connect.
+  # personal). Bare names are preferred, but leading `md://` or `md:` prefixes
+  # are stripped here to match pipelines.runner.normalize_motherduck_database.
+  # Token from MOTHERDUCK_TOKEN; both are required for the -md targets.
   - &motherduck_config
     type: duckdb
-    path: "md:{{ env_var('DESTINATION__MOTHERDUCK__CREDENTIALS__DATABASE', 'personal') | replace('md:', '', 1) }}"
+    path: "md:{{ (env_var('DESTINATION__MOTHERDUCK__CREDENTIALS__DATABASE', 'personal') | trim | replace('md://', '') | replace('md:', '') | trim) or 'personal' }}"
     motherduck_token: "{{ env_var('MOTHERDUCK_TOKEN') }}"
     schema: "{{ env_var('DBT_SCHEMA', 'reporting') }}"
     threads: 4
 personal:
-  target: "{{ env_var('DBT_TARGET', 'dev-db') }}"
+  target: "{{ env_var('DBT_TARGET', 'dev-md') }}"
   outputs:
     mock:
       type: duckdb

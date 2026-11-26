@@ -17,8 +17,9 @@
 [![Run Transformations](https://github.com/michaelconan/personal-reporting-pipelines/actions/workflows/run-transforms.yml/badge.svg)](https://github.com/michaelconan/personal-reporting-pipelines/actions/workflows/run-transforms.yml)
 
 Personal data integration and analytics platform using dlt (ingestion into
-Databricks Unity Catalog) and dbt (transformations on Databricks), orchestrated
-with GitHub Actions and managed locally with mise.
+MotherDuck, with Databricks Unity Catalog retained for the transition) and dbt
+(transformations on MotherDuck), orchestrated with GitHub Actions and managed
+locally with mise.
 
 ## Overview
 
@@ -153,7 +154,7 @@ of concerns:
    mise run pipeline -- notion --full             # one dlt source
    mise run pipeline-all                          # all three dlt sources
    mise run dbt-build-mock                        # DuckDB fixture build
-   mise run dbt-build                             # starts SQL warehouse, uses DBT_TARGET (default dev-db)
+   mise run dbt-build                             # uses DBT_TARGET (default dev-md); starts the SQL warehouse only for *-db
    mise run docs                                  # dbt + Sphinx documentation
    ```
 
@@ -203,8 +204,10 @@ before removing an ephemeral environment and restore them later.
     sbx secret set-custom databricks-token --command 'powershell.exe -NoProfile -Command C:\Tools\Get-DatabricksToken.ps1' --refresh 30m --env DESTINATION__DATABRICKS__CREDENTIALS__ACCESS_TOKEN
    ```
 
-   For dbt `test-db` and `prod-db` targets, the profiles read the same dlt-style
-   `DESTINATION__DATABRICKS__CREDENTIALS__CLIENT_ID` and
+   MotherDuck targets (`dev-md`/`test-md`/`prod-md`, the defaults) read
+   `MOTHERDUCK_TOKEN` and `DESTINATION__MOTHERDUCK__CREDENTIALS__DATABASE`
+   (default `personal`). For dbt `test-db` and `prod-db` targets, the profiles
+   read the same dlt-style `DESTINATION__DATABRICKS__CREDENTIALS__CLIENT_ID` and
    `DESTINATION__DATABRICKS__CREDENTIALS__CLIENT_SECRET` variables. The
    warehouse preflight maps them to Databricks CLI variables when starting
    the warehouse. Set `OP_ENVIRONMENT_ID` to the 1Password Environment ID used
@@ -287,8 +290,9 @@ gh aw run my-workflow
 
 ### Integrations
 
-1. **Databricks Unity Catalog** — primary destination for dlt and dbt
-2. **1Password Environments** — source and warehouse credentials for local and CI tasks
+1. **MotherDuck** — primary destination for dlt and dbt (`*-md` targets)
+2. **Databricks Unity Catalog** — transition/rollback destination (`*-db` targets)
+3. **1Password Environments** — source and warehouse credentials for local and CI tasks
 
 ## Pipeline Refresh Patterns
 

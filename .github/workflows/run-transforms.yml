@@ -15,7 +15,7 @@ on:
       force_full_refresh:
         description: 'Force full refresh'
         required: false
-        default: 'false'
+        default: false
         type: boolean
 
 permissions:
@@ -54,16 +54,9 @@ jobs:
           DBT_SCHEMA: reporting
           RAW_SCHEMA: raw
         run: |
-          if [ "$DBT_TARGET" = "prod-md" ]; then
-            freshness_task=dbt-source-freshness-md
-            build_task=dbt-build-md
-          else
-            freshness_task=dbt-source-freshness
-            build_task=dbt-build
-          fi
-          op run --environment "$OP_ENVIRONMENT_ID" -- env DBT_TARGET="$DBT_TARGET" DBT_SCHEMA="$DBT_SCHEMA" RAW_SCHEMA="$RAW_SCHEMA" mise run "$freshness_task"
+          op run --environment "$OP_ENVIRONMENT_ID" -- env DBT_TARGET="$DBT_TARGET" DBT_SCHEMA="$DBT_SCHEMA" RAW_SCHEMA="$RAW_SCHEMA" mise run dbt-source-freshness
           if [ "${{ inputs.force_full_refresh }}" = "true" ]; then
-            op run --environment "$OP_ENVIRONMENT_ID" -- env DBT_TARGET="$DBT_TARGET" DBT_SCHEMA="$DBT_SCHEMA" RAW_SCHEMA="$RAW_SCHEMA" mise run "$build_task" -- --full-refresh
+            op run --environment "$OP_ENVIRONMENT_ID" -- env DBT_TARGET="$DBT_TARGET" DBT_SCHEMA="$DBT_SCHEMA" RAW_SCHEMA="$RAW_SCHEMA" mise run dbt-build -- --full-refresh
           else
-            op run --environment "$OP_ENVIRONMENT_ID" -- env DBT_TARGET="$DBT_TARGET" DBT_SCHEMA="$DBT_SCHEMA" RAW_SCHEMA="$RAW_SCHEMA" mise run "$build_task"
+            op run --environment "$OP_ENVIRONMENT_ID" -- env DBT_TARGET="$DBT_TARGET" DBT_SCHEMA="$DBT_SCHEMA" RAW_SCHEMA="$RAW_SCHEMA" mise run dbt-build
           fi

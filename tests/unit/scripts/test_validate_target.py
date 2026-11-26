@@ -9,7 +9,7 @@ from pathlib import Path
 
 import pytest
 
-from pipelines.targets import validate_ingestion_target, validate_target
+from pipelines.targets import get_target_schemas, validate_ingestion_target, validate_target
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 
@@ -31,6 +31,16 @@ REPO_ROOT = Path(__file__).resolve().parents[3]
 )
 def test_validate_target_accepts_matching_schemas(target, schema, raw_schema):
     validate_target(target, schema, raw_schema)
+
+
+def test_get_target_schemas_returns_matching_pair():
+    assert get_target_schemas("dev-md") == ("reporting_dev", "raw_dev")
+    assert get_target_schemas("prod-db") == ("reporting", "raw")
+
+
+def test_get_target_schemas_rejects_unknown_target():
+    with pytest.raises(ValueError, match="DBT_TARGET must be one of"):
+        get_target_schemas("staging")
 
 
 def test_validate_target_rejects_unknown_target():

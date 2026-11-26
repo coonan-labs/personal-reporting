@@ -18,17 +18,21 @@ TARGET_SCHEMAS = {
 INGESTION_TARGETS = {"dev-db", "test-db", "prod-db", "dev-md", "test-md", "prod-md", "mock"}
 
 
+def get_target_schemas(target: str | None) -> tuple[str, str]:
+    """Return the ``(DBT_SCHEMA, RAW_SCHEMA)`` pair for a target."""
+    expected = TARGET_SCHEMAS.get(target or "")
+    if expected is None:
+        choices = ", ".join(sorted(TARGET_SCHEMAS))
+        raise ValueError(f"DBT_TARGET must be one of {choices} (got {target!r})")
+    return expected
+
+
 def validate_target(
     target: str | None,
     schema: str | None,
     raw_schema: str | None,
 ) -> None:
-    expected = TARGET_SCHEMAS.get(target or "")
-    if expected is None:
-        choices = ", ".join(sorted(TARGET_SCHEMAS))
-        raise ValueError(f"DBT_TARGET must be one of {choices} (got {target!r})")
-
-    expected_schema, expected_raw_schema = expected
+    expected_schema, expected_raw_schema = get_target_schemas(target)
     if (schema, raw_schema) != (expected_schema, expected_raw_schema):
         raise ValueError(
             f"DBT_TARGET={target} requires DBT_SCHEMA={expected_schema} and "

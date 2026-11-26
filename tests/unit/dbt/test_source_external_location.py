@@ -46,6 +46,9 @@ def _parse_manifest(target: str, tmp_path: Path) -> dict:
     assert dbt is not None
     env = os.environ.copy()
     env["TZ"] = "UTC"
+    env["DBT_TARGET"] = target
+    env["DBT_SCHEMA"] = "reporting_dev"
+    env["RAW_SCHEMA"] = "raw_dev"
     # Parse only renders the profile; a dummy token is enough (no connection).
     env["MOTHERDUCK_TOKEN"] = "test-token"
     target_path = tmp_path / f"target-{target}"

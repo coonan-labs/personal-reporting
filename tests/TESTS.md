@@ -92,14 +92,14 @@ waits for the warehouse first, then runs the tests inside the configured
 
 ## dbt tests
 
-### Targets (`dbt/profiles.yml`, `DBT_TARGET` env, default `dev-db`)
+### Targets (`dbt/profiles.yml`, `DBT_TARGET` env, default `dev-md`)
 
 | Target | Adapter | Dataset/schema | Source/seeds behaviour (`dbt_project.yml`) |
 | ------ | ------- | -------------- | ------------------------------------------ |
-| `mock` | DuckDB (`dbt.duckdb`) | `reporting_dev` | sources **disabled**; mock sources/fixtures are used for local model builds |
+| `mock` | DuckDB (`dbt.duckdb`) | `reporting_dev` | sources resolve to fixture CSVs via `config.external_location`; no warehouse connection |
 | `dev-db` / `test-db` | Databricks Unity Catalog | catalog `workspace`, schemas `reporting_dev` / `reporting_test`; raw schemas `raw_dev` / `raw_test` | sources enabled; models read `RAW_SCHEMA` via `source()` |
 | `prod-db` | Databricks Unity Catalog | catalog `workspace`, schema `reporting`; raw schema `raw` | sources enabled; models read `RAW_SCHEMA` via `source()` |
-| `dev-md` / `test-md` / `prod-md` | MotherDuck (DuckDB) | database from `DESTINATION__MOTHERDUCK__CREDENTIALS__DATABASE`, schemas `reporting_dev` / `reporting_test` / `reporting`; raw schemas `raw_dev` / `raw_test` / `raw` | sources enabled; models read `RAW_SCHEMA` via `source()` |
+| `dev-md` / `test-md` / `prod-md` | MotherDuck (DuckDB) | database from `DESTINATION__MOTHERDUCK__CREDENTIALS__DATABASE`, schemas `reporting_dev` / `reporting_test` / `reporting`; raw schemas `raw_dev` / `raw_test` / `raw` | sources enabled; models read `RAW_SCHEMA` via `source()`; default target is `dev-md` |
 | `dev-bq` / `test-bq` / `prod-bq` | BigQuery | schemas `reporting_dev` / `reporting_test` / `reporting`; raw schemas `raw_dev` / `raw_test` / `raw` | sources enabled; models read `RAW_SCHEMA` via `source()` |
 
 Models call `source(source_name, relation_name)` directly. Mock fixtures must
@@ -114,7 +114,7 @@ Other `dbt_project.yml` settings relevant to tests: staging/core = views, interm
 mise run dbt-deps
 mise run dbt-build-mock                         # seed + run + test
 mise run dbt-build-mock -- --select "habits*" --full-refresh
-mise run dbt-build                                # uses DBT_TARGET (default dev)
+mise run dbt-build                                # uses DBT_TARGET (default dev-md)
 mise run dbt -- run --target mock --select stg_notion__daily_habits
 mise run dbt -- test --target mock
 mise run dbt-lint
@@ -137,8 +137,8 @@ Mock source coverage lives in `dbt/test_fixtures/{google_health,hubspot,notion}/
 
 ## CI mapping
 
-- `test-pipelines.yml` (on `pipelines/**`, `tests/**` changes): `mise run setup` → always `mise run test` → `mise run test-e2e` when the 1Password Environment is available → Codecov coverage + test results.
-- `test-transforms.yml` (on `dbt/**` changes): `mise run setup` + `mise run dbt-deps` → `mise run dbt-build-mock` → `mise run dbt-build` with `DBT_TARGET=test-db` when 1Password credentials are available.
+- `test-pipelines.yml` (on `pipelines/**`, `tests/**` changes): `mise run setup` + `mise run dbt-deps` → always `mise run test` → `mise run test-e2e` when the 1Password Environment is available → Codecov coverage + test results.
+- `test-transforms.yml` (on `dbt/**` changes): `mise run setup` + `mise run dbt-deps` → `mise run dbt-build-mock` → `mise run dbt-build` with `DBT_TARGET=test-db` when 1Password credentials are available (explicit Databricks integration coverage while the MotherDuck e2e path is still being migrated).
 - `lint.yml` (every PR): `prek` (Python/ruff), `dbt lint` (SQLFluff engine, reuses `dbt/.sqlfluff`, `DBT_TARGET=mock`), `dbt parse` + `dbt compile --write-catalog` (produces `catalog.json` for bouncer; `docs generate` no longer emits one under dbt 2.x), `dbt-bouncer` checks.
 
 Credentialed tasks run inside `op run --environment "$OP_ENVIRONMENT_ID" -- ...`.
