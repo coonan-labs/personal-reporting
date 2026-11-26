@@ -245,7 +245,7 @@ def test_runner_refresh_pipeline_uses_motherduck_destination_for_md_target(
     )
     destination = mock_dlt_pipeline.call_args.kwargs["destination"]
     assert isinstance(destination, motherduck)
-    assert destination.config_params["credentials"] == {"database": "personal-muse"}
+    assert destination.config_params["credentials"] == {"database": "personal"}
     # The Databricks staging volume path must not run for MotherDuck targets.
     mock_dlt_secrets_get.assert_not_called()
 

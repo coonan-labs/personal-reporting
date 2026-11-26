@@ -17,7 +17,7 @@ dbt Staging (views) → dbt Intermediate → dbt Marts (tables)
 **Rollback targets**: BigQuery (`dev-bq`, `test-bq`, `prod-bq` targets) — retained for easy rollback path
 **Local development**: DuckDB (`mock` target) with CSV test fixtures
 
-Default target is `dev-db` (Databricks). MotherDuck targets (`dev-md`/`test-md`/`prod-md`) use `DESTINATION__MOTHERDUCK__CREDENTIALS__DATABASE` (default `personal-muse`) and `MOTHERDUCK_TOKEN`. Use `DBT_TARGET` to select the target and set the matching `DBT_SCHEMA` / `RAW_SCHEMA`; local defaults are `reporting_dev` / `raw_dev`.
+Default target is `dev-db` (Databricks). MotherDuck targets (`dev-md`/`test-md`/`prod-md`) use `DESTINATION__MOTHERDUCK__CREDENTIALS__DATABASE` (default `personal`) and `MOTHERDUCK_TOKEN`. Use `DBT_TARGET` to select the target and set the matching `DBT_SCHEMA` / `RAW_SCHEMA`; local defaults are `reporting_dev` / `raw_dev`.
 
 ## GitHub Agentic Workflows (gh-aw)
 Scheduled AI-driven automation uses [gh-aw](https://github.com/github/gh-aw). Each workflow is a `.md` source file (frontmatter + agent prompt) compiled to a `.lock.yml` GitHub Actions file. Engine for this project: **Gemini** (`GEMINI_API_KEY` secret required).
@@ -43,7 +43,7 @@ Current agentic workflow: `weekly-doc-updater` — runs every Monday, opens a PR
 There is no `make_source` macro. Models call `{{ source(source_name, relation_name) }}` directly for every target:
 - **mock (DuckDB)**: each source reads its test fixture via `config.external_location: dbt/test_fixtures/{source}/{identifier}.csv`.
 - **dev-db/test-db/prod-db (Databricks)**: sources resolve to the raw schema in Unity Catalog.
-- **dev-md/test-md/prod-md (MotherDuck)**: sources resolve to the raw schema in the MotherDuck database named by `DESTINATION__MOTHERDUCK__CREDENTIALS__DATABASE` (default `personal-muse`).
+- **dev-md/test-md/prod-md (MotherDuck)**: sources resolve to the raw schema in the MotherDuck database named by `DESTINATION__MOTHERDUCK__CREDENTIALS__DATABASE` (default `personal`).
 - **dev-bq/test-bq/prod-bq (BigQuery)**: sources resolve to the raw schema (rollback path).
 
 **Consequence**: fixtures in `dbt/test_fixtures/{source}/` MUST be named after the source identifiers in `_*sources.yml`.

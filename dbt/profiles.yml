@@ -20,11 +20,11 @@ anchors:
     keyfile: "{{ env_var('GOOGLE_APPLICATION_CREDENTIALS') }}"
   # MotherDuck configuration (dbt-duckdb adapter, md: connection string).
   # Database from DESTINATION__MOTHERDUCK__CREDENTIALS__DATABASE (default
-  # personal-muse), token from MOTHERDUCK_TOKEN; both are required for the
+  # personal), token from MOTHERDUCK_TOKEN; both are required for the
   # -md targets to connect.
   - &motherduck_config
     type: duckdb
-    path: "md:{{ env_var('DESTINATION__MOTHERDUCK__CREDENTIALS__DATABASE', 'personal-muse') }}"
+    path: "md:{{ env_var('DESTINATION__MOTHERDUCK__CREDENTIALS__DATABASE', 'personal') }}"
     motherduck_token: "{{ env_var('MOTHERDUCK_TOKEN') }}"
     schema: "{{ env_var('DBT_SCHEMA', 'reporting') }}"
     threads: 4

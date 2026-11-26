@@ -91,7 +91,7 @@ def get_destination() -> Any:
 
     MotherDuck targets (``*-md``) load into the MotherDuck database named by
     ``DESTINATION__MOTHERDUCK__CREDENTIALS__DATABASE`` (default
-    ``personal-muse``); the token comes from the ``MOTHERDUCK_TOKEN``
+    ``personal``); the token comes from the ``MOTHERDUCK_TOKEN``
     environment variable. All other ingestion targets use the Databricks
     destination with a per-schema staging volume.
     """
@@ -99,7 +99,7 @@ def get_destination() -> Any:
         return motherduck(
             credentials={
                 "database": os.environ.get(
-                    "DESTINATION__MOTHERDUCK__CREDENTIALS__DATABASE", "personal-muse"
+                    "DESTINATION__MOTHERDUCK__CREDENTIALS__DATABASE", "personal"
                 )
             },
         )
