@@ -86,21 +86,50 @@ def get_databricks_staging_volume(dataset_name: str) -> str:
     return f"{catalog}.{dataset_name}.staging"
 
 
+def is_motherduck_target(target: str | None = None) -> bool:
+    """Return True when the target is a MotherDuck target (``*-md``)."""
+    return (DBT_TARGET if target is None else target).endswith("-md")
+
+
+def normalize_motherduck_database(value: str | None) -> str:
+    """Return a bare MotherDuck database name.
+
+    The environment value must be a bare database name (``personal``). A
+    leading ``md:`` prefix is stripped defensively: both dlt and dbt already
+    prefix it when connecting, so ``md:personal`` would become the invalid
+    ``md:md:personal``.
+    """
+    name = (value or "").strip()
+    if name.startswith("md://"):
+        name = name[5:]
+    elif name.startswith("md:"):
+        name = name[3:]
+    return name or "personal"
+
+
 def get_destination() -> Any:
     """Return the dlt destination for the current DBT_TARGET.
 
     MotherDuck targets (``*-md``) load into the MotherDuck database named by
     ``DESTINATION__MOTHERDUCK__CREDENTIALS__DATABASE`` (default
-    ``personal``); the token comes from the ``MOTHERDUCK_TOKEN``
-    environment variable. All other ingestion targets use the Databricks
-    destination with a per-schema staging volume.
+    ``personal``; a bare name, see :func:`normalize_motherduck_database`).
+    The token is passed explicitly from ``MOTHERDUCK_TOKEN`` and is required.
+    All other ingestion targets use the Databricks destination with a
+    per-schema staging volume.
     """
-    if DBT_TARGET.endswith("-md"):
+    if is_motherduck_target():
+        token = os.environ.get("MOTHERDUCK_TOKEN")
+        if not token:
+            raise OSError(
+                "MOTHERDUCK_TOKEN is not set; it is required for MotherDuck "
+                "targets (DBT_TARGET ends in -md)"
+            )
         return motherduck(
             credentials={
-                "database": os.environ.get(
-                    "DESTINATION__MOTHERDUCK__CREDENTIALS__DATABASE", "personal"
-                )
+                "database": normalize_motherduck_database(
+                    os.environ.get("DESTINATION__MOTHERDUCK__CREDENTIALS__DATABASE")
+                ),
+                "password": token,
             },
         )
     return databricks(

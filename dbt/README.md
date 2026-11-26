@@ -58,7 +58,7 @@ The local testing setup uses a `profiles.yml` file located in `dbt/profiles.yml`
 
 ## Databricks authentication
 
-The `dev` target uses the dlt destination's access token. The `test` and `prod`
+The `dev-db` target uses the dlt destination's access token. The `test-db` and `prod-db`
 targets use Databricks OAuth M2M with the dlt-style
 `DESTINATION__DATABRICKS__CREDENTIALS__CLIENT_ID` and
 `DESTINATION__DATABRICKS__CREDENTIALS__CLIENT_SECRET` variables. The warehouse

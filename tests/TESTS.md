@@ -24,7 +24,7 @@ Defined in `pyproject.toml` (`[tool.pytest.ini_options]`) and `tests/conftest.py
 - Markers: `e2e` (cloud Databricks), `live` (calls external APIs, explicit opt-in), `local` (offline).
 - `addopts = "-s -p no:pytest-responses --log-cli-level=INFO"`: the `responses` mock library is activated explicitly per-test via the `mock_responses` fixture, so it never interferes with e2e tests.
 - Coverage: `source = ["pipelines"]`, branch coverage, reports to `coverage.xml` + `test-results-*.xml` uploaded to Codecov.
-- `tests/conftest.py` sets `TEST=True`, `DBT_TARGET=test`, `DBT_SCHEMA=reporting_test`, `RAW_SCHEMA=raw_test`, `RUNTIME__LOG_LEVEL=INFO`, and re-wires the `dlt` logger to pytest handlers.
+- `tests/conftest.py` sets `TEST=True`, `DBT_TARGET=test-db`, `DBT_SCHEMA=reporting_test`, `RAW_SCHEMA=raw_test`, `RUNTIME__LOG_LEVEL=INFO`, and re-wires the `dlt` logger to pytest handlers.
 
 ## dlt unit tests (`tests/unit/dlt/`, marker `local`)
 
@@ -92,13 +92,15 @@ waits for the warehouse first, then runs the tests inside the configured
 
 ## dbt tests
 
-### Targets (`dbt/profiles.yml`, `DBT_TARGET` env, default `dev`)
+### Targets (`dbt/profiles.yml`, `DBT_TARGET` env, default `dev-db`)
 
 | Target | Adapter | Dataset/schema | Source/seeds behaviour (`dbt_project.yml`) |
 | ------ | ------- | -------------- | ------------------------------------------ |
 | `mock` | DuckDB (`dbt.duckdb`) | `reporting_dev` | sources **disabled**; mock sources/fixtures are used for local model builds |
-| `dev` / `test` | Databricks Unity Catalog | catalog `workspace`, schemas `reporting_dev` / `reporting_test`; raw schemas `raw_dev` / `raw_test` | sources enabled; models read `RAW_SCHEMA` via `source()` |
-| `prod` | Databricks Unity Catalog | catalog `workspace`, schema `reporting`; raw schema `raw` | sources enabled; models read `RAW_SCHEMA` via `source()` |
+| `dev-db` / `test-db` | Databricks Unity Catalog | catalog `workspace`, schemas `reporting_dev` / `reporting_test`; raw schemas `raw_dev` / `raw_test` | sources enabled; models read `RAW_SCHEMA` via `source()` |
+| `prod-db` | Databricks Unity Catalog | catalog `workspace`, schema `reporting`; raw schema `raw` | sources enabled; models read `RAW_SCHEMA` via `source()` |
+| `dev-md` / `test-md` / `prod-md` | MotherDuck (DuckDB) | database from `DESTINATION__MOTHERDUCK__CREDENTIALS__DATABASE`, schemas `reporting_dev` / `reporting_test` / `reporting`; raw schemas `raw_dev` / `raw_test` / `raw` | sources enabled; models read `RAW_SCHEMA` via `source()` |
+| `dev-bq` / `test-bq` / `prod-bq` | BigQuery | schemas `reporting_dev` / `reporting_test` / `reporting`; raw schemas `raw_dev` / `raw_test` / `raw` | sources enabled; models read `RAW_SCHEMA` via `source()` |
 
 Models call `source(source_name, relation_name)` directly. Mock fixtures must
 match identifiers in `_*sources.yml`; local DuckDB inputs are wired through
@@ -136,7 +138,7 @@ Mock source coverage lives in `dbt/test_fixtures/{google_health,hubspot,notion}/
 ## CI mapping
 
 - `test-pipelines.yml` (on `pipelines/**`, `tests/**` changes): `mise run setup` → always `mise run test` → `mise run test-e2e` when the 1Password Environment is available → Codecov coverage + test results.
-- `test-transforms.yml` (on `dbt/**` changes): `mise run setup` + `mise run dbt-deps` → `mise run dbt-build-mock` → `mise run dbt-build` with `DBT_TARGET=test` when 1Password credentials are available.
+- `test-transforms.yml` (on `dbt/**` changes): `mise run setup` + `mise run dbt-deps` → `mise run dbt-build-mock` → `mise run dbt-build` with `DBT_TARGET=test-db` when 1Password credentials are available.
 - `lint.yml` (every PR): `prek` (Python/ruff), `dbt lint` (SQLFluff engine, reuses `dbt/.sqlfluff`, `DBT_TARGET=mock`), `dbt parse` + `dbt compile --write-catalog` (produces `catalog.json` for bouncer; `docs generate` no longer emits one under dbt 2.x), `dbt-bouncer` checks.
 
 Credentialed tasks run inside `op run --environment "$OP_ENVIRONMENT_ID" -- ...`.

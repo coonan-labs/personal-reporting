@@ -37,6 +37,9 @@ Models call `{{ source(source_name, relation_name) }}` directly; there is no `ma
 - In mock (DuckDB) each source reads its test fixture via `config.external_location: dbt/test_fixtures/{source}/{identifier}.csv`.
 - In dev-db/test-db/prod-db (Databricks Unity Catalog) sources resolve to the raw schema
   in catalog `workspace`.
+- In dev-md/test-md/prod-md (MotherDuck) sources resolve to the raw schema in
+  the MotherDuck database named by `DESTINATION__MOTHERDUCK__CREDENTIALS__DATABASE`.
+- In dev-bq/test-bq/prod-bq (BigQuery) sources resolve to the raw schema (rollback path).
 
 Consequence: fixture filenames under `dbt/test_fixtures/{source}/` must match the source identifiers in `_*sources.yml`.
 

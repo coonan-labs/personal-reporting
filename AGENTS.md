@@ -17,7 +17,7 @@ dbt Staging (views) → dbt Intermediate → dbt Marts (tables)
 **Rollback targets**: BigQuery (`dev-bq`, `test-bq`, `prod-bq` targets) — retained for easy rollback path
 **Local development**: DuckDB (`mock` target) with CSV test fixtures
 
-Default target is `dev-db` (Databricks). MotherDuck targets (`dev-md`/`test-md`/`prod-md`) use `DESTINATION__MOTHERDUCK__CREDENTIALS__DATABASE` (default `personal`) and `MOTHERDUCK_TOKEN`. Use `DBT_TARGET` to select the target and set the matching `DBT_SCHEMA` / `RAW_SCHEMA`; local defaults are `reporting_dev` / `raw_dev`.
+Default target is `dev-db` (Databricks). MotherDuck targets (`dev-md`/`test-md`/`prod-md`) use `DESTINATION__MOTHERDUCK__CREDENTIALS__DATABASE` (default `personal`; a bare database name, no `md:` prefix) and `MOTHERDUCK_TOKEN`. Use `DBT_TARGET` to select the target and set the matching `DBT_SCHEMA` / `RAW_SCHEMA`; local defaults are `reporting_dev` / `raw_dev`.
 
 ## GitHub Agentic Workflows (gh-aw)
 Scheduled AI-driven automation uses [gh-aw](https://github.com/github/gh-aw). Each workflow is a `.md` source file (frontmatter + agent prompt) compiled to a `.lock.yml` GitHub Actions file. Engine for this project: **Gemini** (`GEMINI_API_KEY` secret required).

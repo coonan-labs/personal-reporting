@@ -1,5 +1,6 @@
 """Unit tests for the central pipeline runner and CLI interface."""
 
+import dataclasses
 from unittest.mock import ANY, MagicMock, patch
 
 import pytest
@@ -7,7 +8,14 @@ from dlt.destinations import databricks, motherduck
 
 from pipelines import RAW_SCHEMA
 from pipelines.run_pipeline import main, parse_select
-from pipelines.runner import PIPELINE_CONFIG, get_databricks_staging_volume, refresh_pipeline
+from pipelines.runner import (
+    PIPELINE_CONFIG,
+    get_databricks_staging_volume,
+    get_destination,
+    is_motherduck_target,
+    normalize_motherduck_database,
+    refresh_pipeline,
+)
 
 
 def test_parse_select():
@@ -214,6 +222,8 @@ def test_runner_refresh_pipeline_uses_motherduck_destination_for_md_target(
     monkeypatch.setattr("pipelines.runner.DBT_TARGET", "dev-md")
     monkeypatch.setattr("pipelines.runner.DBT_SCHEMA", "reporting_dev")
     monkeypatch.setattr("pipelines.runner.RAW_SCHEMA", "raw_dev")
+    monkeypatch.setenv("MOTHERDUCK_TOKEN", "test-token")
+    monkeypatch.delenv("DESTINATION__MOTHERDUCK__CREDENTIALS__DATABASE", raising=False)
 
     mock_pipeline_instance = MagicMock()
     mock_dlt_pipeline.return_value = mock_pipeline_instance
@@ -225,12 +235,9 @@ def test_runner_refresh_pipeline_uses_motherduck_destination_for_md_target(
     with patch.dict(
         PIPELINE_CONFIG,
         {
-            "notion": PIPELINE_CONFIG["notion"].__class__(
+            "notion": dataclasses.replace(
+                PIPELINE_CONFIG["notion"],
                 source_factory=MagicMock(return_value=mock_notion_source),
-                pipeline_name="notion_habits_pipeline",
-                display_name="Notion Habits",
-                required_secret_keys=["sources.notion.api_key"],
-                source_kwargs={"db_name": "Disciplines"},
             )
         },
     ):
@@ -245,9 +252,69 @@ def test_runner_refresh_pipeline_uses_motherduck_destination_for_md_target(
     )
     destination = mock_dlt_pipeline.call_args.kwargs["destination"]
     assert isinstance(destination, motherduck)
-    assert destination.config_params["credentials"] == {"database": "personal"}
+    assert destination.config_params["credentials"] == {
+        "database": "personal",
+        "password": "test-token",
+    }
     # The Databricks staging volume path must not run for MotherDuck targets.
     mock_dlt_secrets_get.assert_not_called()
+
+
+def test_get_destination_motherduck_normalizes_database_and_passes_token(
+    monkeypatch,
+):
+    """A md:-prefixed database is normalized and the token is passed explicitly."""
+    monkeypatch.setattr("pipelines.runner.DBT_TARGET", "test-md")
+    monkeypatch.setenv(
+        "DESTINATION__MOTHERDUCK__CREDENTIALS__DATABASE", "md:other-db"
+    )
+    monkeypatch.setenv("MOTHERDUCK_TOKEN", "tok-123")
+
+    destination = get_destination()
+
+    assert isinstance(destination, motherduck)
+    assert destination.config_params["credentials"] == {
+        "database": "other-db",
+        "password": "tok-123",
+    }
+
+
+def test_get_destination_motherduck_requires_token(monkeypatch):
+    """A missing MOTHERDUCK_TOKEN fails fast instead of at connect time."""
+    monkeypatch.setattr("pipelines.runner.DBT_TARGET", "dev-md")
+    monkeypatch.delenv("MOTHERDUCK_TOKEN", raising=False)
+
+    with pytest.raises(OSError, match="MOTHERDUCK_TOKEN is not set"):
+        get_destination()
+
+
+@pytest.mark.parametrize(
+    ("value", "expected"),
+    [
+        ("personal", "personal"),
+        ("md:personal", "personal"),
+        ("md://personal", "personal"),
+        ("  personal  ", "personal"),
+        (None, "personal"),
+        ("", "personal"),
+    ],
+)
+def test_normalize_motherduck_database(value, expected):
+    assert normalize_motherduck_database(value) == expected
+
+
+@pytest.mark.parametrize(
+    ("target", "expected"),
+    [
+        ("dev-md", True),
+        ("test-md", True),
+        ("prod-md", True),
+        ("dev-db", False),
+        ("mock", False),
+    ],
+)
+def test_is_motherduck_target(target, expected):
+    assert is_motherduck_target(target) is expected
 
 
 def test_refresh_pipeline_rejects_target_schema_mismatch(monkeypatch):

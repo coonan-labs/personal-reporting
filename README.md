@@ -203,7 +203,7 @@ before removing an ephemeral environment and restore them later.
     sbx secret set-custom databricks-token --command 'powershell.exe -NoProfile -Command C:\Tools\Get-DatabricksToken.ps1' --refresh 30m --env DESTINATION__DATABRICKS__CREDENTIALS__ACCESS_TOKEN
    ```
 
-   For dbt `test` and `prod` targets, the profiles read the same dlt-style
+   For dbt `test-db` and `prod-db` targets, the profiles read the same dlt-style
    `DESTINATION__DATABRICKS__CREDENTIALS__CLIENT_ID` and
    `DESTINATION__DATABRICKS__CREDENTIALS__CLIENT_SECRET` variables. The
    warehouse preflight maps them to Databricks CLI variables when starting

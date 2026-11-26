@@ -39,8 +39,9 @@ credentialed values through the selected 1Password Environment, or configure
 `DBT_TARGET` defaults to `dev-db`, with matching `DBT_SCHEMA=reporting_dev` and
 `RAW_SCHEMA=raw_dev` defaults for local work. Set all three together when
 targeting another environment; the scheduled workflows set them explicitly on
-their run steps. The pipeline, `dbt-build`, and `dbt-source-freshness` tasks
-validate that the target and schemas agree before running.
+their run steps. The pipeline, `pipeline-md`, `dbt-build`, `dbt-build-md`, and `dbt-source-freshness` tasks
+validate that the target and schemas agree before running. The `-md` tasks
+additionally require a MotherDuck target (``DBT_TARGET`` ending in ``-md``).
 
 Credentialed tasks require `OP_SERVICE_ACCOUNT_TOKEN` and `OP_ENVIRONMENT_ID`.
 They run their commands using:
@@ -58,10 +59,10 @@ Databricks variables, including `DESTINATION__DATABRICKS__CREDENTIALS__SERVER_HO
 `DESTINATION__DATABRICKS__CREDENTIALS__CLIENT_SECRET`. The warehouse helper maps
 the dlt OAuth pair to the Databricks CLI's native `DATABRICKS_CLIENT_ID` and
 `DATABRICKS_CLIENT_SECRET` variables and selects OAuth M2M authentication.
-The dbt `test` and `prod` profiles read the dlt-style
+The dbt `test-db` and `prod-db` profiles read the dlt-style
 `DESTINATION__DATABRICKS__CREDENTIALS__CLIENT_ID` and
 `DESTINATION__DATABRICKS__CREDENTIALS__CLIENT_SECRET` variables directly; the
-`dev` profile continues to use the dlt access token.
+`dev-db` profile continues to use the dlt access token.
 
 The Databricks CLI task derives the warehouse ID from the dlt HTTP path, starts
 the SQL warehouse if needed, and waits for it to report `RUNNING` and `HEALTHY`.
@@ -71,7 +72,8 @@ soft-bounded by a 15-minute overall deadline (checked at loop boundaries,
 so it can overshoot by up to a CLI timeout plus a poll interval).
 For PAT authentication, it maps the dlt `ACCESS_TOKEN` to `DATABRICKS_TOKEN`.
 `pipeline`, `pipeline-all`, `test-e2e`, `dbt-build`, and `dbt-source-freshness`
-perform this preflight automatically. To start it separately, run
+perform this preflight automatically. The `pipeline-md` and `dbt-build-md`
+tasks skip it (no Databricks warehouse is involved) but require a `-md` target. To start it separately, run
 `mise run databricks-start`. The task command definitions are in `mise.toml`;
 `scripts/databricks_warehouse.py` handles the warehouse start/wait logic and
 the `docs` task builds Sphinx output and copies the dbt SPA. The dbt redirect is

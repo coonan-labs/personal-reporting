@@ -43,13 +43,13 @@ def test_validate_target_rejects_mismatched_schemas():
         validate_target("prod-db", "reporting_dev", "raw_dev")
 
 
-def run_cli(**overrides: str) -> subprocess.CompletedProcess[str]:
+def run_cli(args: list[str] | None = None, **overrides: str) -> subprocess.CompletedProcess[str]:
     env = os.environ.copy()
     for name in ("DBT_TARGET", "DBT_SCHEMA", "RAW_SCHEMA"):
         env.pop(name, None)
     env.update(overrides)
     return subprocess.run(
-        [sys.executable, "scripts/validate_target.py"],
+        [sys.executable, "scripts/validate_target.py", *(args or [])],
         cwd=REPO_ROOT,
         env=env,
         capture_output=True,
@@ -78,6 +78,30 @@ def test_validate_target_cli_fails_for_mismatched_schemas():
 
     assert result.returncode != 0
     assert "requires DBT_SCHEMA=reporting" in result.stderr
+
+
+def test_validate_target_cli_require_suffix_accepts_motherduck_target():
+    result = run_cli(
+        ["--require-suffix=-md"],
+        DBT_TARGET="dev-md",
+        DBT_SCHEMA="reporting_dev",
+        RAW_SCHEMA="raw_dev",
+    )
+
+    assert result.returncode == 0
+    assert result.stderr == ""
+
+
+def test_validate_target_cli_require_suffix_rejects_databricks_target():
+    result = run_cli(
+        ["--require-suffix=-md"],
+        DBT_TARGET="dev-db",
+        DBT_SCHEMA="reporting_dev",
+        RAW_SCHEMA="raw_dev",
+    )
+
+    assert result.returncode != 0
+    assert "must end in '-md'" in result.stderr
 
 
 def test_validate_ingestion_target_rejects_bigquery_target():
