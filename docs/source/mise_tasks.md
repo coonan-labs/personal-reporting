@@ -28,6 +28,7 @@ credentialed values through the selected 1Password Environment, or configure
 | `mise run dbt-build` | Build/test against `DBT_TARGET` (default `dev-db`) |
 | `mise run dbt-build-md` | Build/test against a MotherDuck `DBT_TARGET` (no warehouse start) |
 | `mise run dbt-source-freshness` | Run source freshness against `DBT_TARGET` (default `dev-db`) |
+| `mise run dbt-source-freshness-md` | Run source freshness against a MotherDuck `DBT_TARGET` (no warehouse start) |
 | `mise run dbt -- run --target mock --select <model>` | Pass a dbt command through mise |
 | `mise run dbt-lint` | Lint SQL with dbt's built-in linter |
 | `mise run dbt-bouncer` | Run dbt-bouncer checks |
@@ -37,9 +38,11 @@ credentialed values through the selected 1Password Environment, or configure
 | `mise run clean` | Remove local test/build/documentation artifacts |
 
 `DBT_TARGET` defaults to `dev-db`, with matching `DBT_SCHEMA=reporting_dev` and
-`RAW_SCHEMA=raw_dev` defaults for local work. Set all three together when
-targeting another environment; the scheduled workflows set them explicitly on
-their run steps. The pipeline, `pipeline-md`, `dbt-build`, `dbt-build-md`, and `dbt-source-freshness` tasks
+`RAW_SCHEMA=raw_dev` defaults for local work. Values set in the shell or on a
+CI run step take precedence over the defaults in mise's `[env]` block. Set all
+three together when targeting another environment; the scheduled workflows set
+them explicitly on their run steps. The pipeline, `pipeline-md`, `dbt-build`,
+`dbt-build-md`, `dbt-source-freshness`, and `dbt-source-freshness-md` tasks
 validate that the target and schemas agree before running. The `-md` tasks
 additionally require a MotherDuck target (``DBT_TARGET`` ending in ``-md``).
 

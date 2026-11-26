@@ -25,14 +25,17 @@ mise run dbt-build-mock
 mise run dbt-build
 DBT_TARGET=prod-db DBT_SCHEMA=reporting RAW_SCHEMA=raw mise run dbt-source-freshness
 DBT_TARGET=prod-db DBT_SCHEMA=reporting RAW_SCHEMA=raw mise run dbt-build
+DBT_TARGET=prod-md DBT_SCHEMA=reporting RAW_SCHEMA=raw mise run dbt-source-freshness-md
+DBT_TARGET=prod-md DBT_SCHEMA=reporting RAW_SCHEMA=raw mise run dbt-build-md
 mise run dbt -- run --target mock --select stg_google_health__sleep
 mise run dbt -- test --target mock --select stg_google_health__sleep
 ```
 
 The `mock` target uses DuckDB and CSV fixtures. `dbt-build` and
 `dbt-source-freshness` use `DBT_TARGET` plus the matching `DBT_SCHEMA` and
-`RAW_SCHEMA`, and perform a warehouse preflight. For development docs, run
-`mise run docs`.
+`RAW_SCHEMA`, and perform a warehouse preflight. Their `-md` variants do the
+same validation against a MotherDuck target and skip the warehouse preflight.
+For development docs, run `mise run docs`.
 
 Source freshness (`dbt source freshness`) checks each table against its
 configured SLA. Tables that are not expected to be fresh on the ingestion
@@ -84,10 +87,16 @@ to a CLI timeout plus a poll interval).
 Workflows are in `.github/workflows/`:
 
 - `refresh-notion.yml`, `refresh-hubspot.yml`, `refresh-google-health.yml` —
-  scheduled ingestion via `mise run pipeline` with `DBT_TARGET=prod-db`,
-  `DBT_SCHEMA=reporting`, and `RAW_SCHEMA=raw` set on the run step.
-- `run-transforms.yml` — scheduled dbt source freshness and build via mise with
-  the same production target and schema variables set on the run step.
+  scheduled ingestion against MotherDuck (`DBT_TARGET=prod-md`) by default,
+  using the `pipeline-md` or `pipeline` mise task selected from the manual
+  dispatch `target` input (`prod-md` or `prod-db`); `DBT_SCHEMA=reporting` and
+  `RAW_SCHEMA=raw` are set on the run step.
+- `run-transforms.yml` — scheduled dbt source freshness and build against
+  MotherDuck by default (Databricks selectable on dispatch), using the
+  matching `dbt-source-freshness[-md]` and `dbt-build[-md]` mise tasks.
+- `manual-load-transform.yml` — manually dispatch a full load of all three
+  sources plus a dbt build against a selected Databricks (`dev-db`, `test-db`,
+  `prod-db`) or MotherDuck (`dev-md`, `test-md`, `prod-md`) target.
 - `test-pipelines.yml`, `test-transforms.yml`, `lint.yml` — CI tests and lint.
 - `docs.yml` — builds and deploys the Sphinx/dbt docs site.
 

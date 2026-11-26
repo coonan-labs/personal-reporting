@@ -4,6 +4,14 @@ on:
     - cron: '0 6 * * 1' # monday at 6 AM UTC
   workflow_dispatch:
     inputs:
+      target:
+        description: 'Warehouse target'
+        required: true
+        default: 'prod-md'
+        type: choice
+        options:
+          - prod-md
+          - prod-db
       force_full_refresh:
         description: 'Force full refresh'
         required: false
@@ -42,13 +50,20 @@ jobs:
         env:
           OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
           OP_ENVIRONMENT_ID: ${{ vars.OP_ENVIRONMENT_ID }}
-          DBT_TARGET: prod-db
+          DBT_TARGET: ${{ inputs.target || 'prod-md' }}
           DBT_SCHEMA: reporting
           RAW_SCHEMA: raw
         run: |
-          op run --environment "$OP_ENVIRONMENT_ID" -- env DBT_TARGET="$DBT_TARGET" DBT_SCHEMA="$DBT_SCHEMA" RAW_SCHEMA="$RAW_SCHEMA" mise run dbt-source-freshness
-          if [ "${{ inputs.force_full_refresh }}" = "true" ]; then
-            op run --environment "$OP_ENVIRONMENT_ID" -- env DBT_TARGET="$DBT_TARGET" DBT_SCHEMA="$DBT_SCHEMA" RAW_SCHEMA="$RAW_SCHEMA" mise run dbt-build -- --full-refresh
+          if [ "$DBT_TARGET" = "prod-md" ]; then
+            freshness_task=dbt-source-freshness-md
+            build_task=dbt-build-md
           else
-            op run --environment "$OP_ENVIRONMENT_ID" -- env DBT_TARGET="$DBT_TARGET" DBT_SCHEMA="$DBT_SCHEMA" RAW_SCHEMA="$RAW_SCHEMA" mise run dbt-build
+            freshness_task=dbt-source-freshness
+            build_task=dbt-build
+          fi
+          op run --environment "$OP_ENVIRONMENT_ID" -- env DBT_TARGET="$DBT_TARGET" DBT_SCHEMA="$DBT_SCHEMA" RAW_SCHEMA="$RAW_SCHEMA" mise run "$freshness_task"
+          if [ "${{ inputs.force_full_refresh }}" = "true" ]; then
+            op run --environment "$OP_ENVIRONMENT_ID" -- env DBT_TARGET="$DBT_TARGET" DBT_SCHEMA="$DBT_SCHEMA" RAW_SCHEMA="$RAW_SCHEMA" mise run "$build_task" -- --full-refresh
+          else
+            op run --environment "$OP_ENVIRONMENT_ID" -- env DBT_TARGET="$DBT_TARGET" DBT_SCHEMA="$DBT_SCHEMA" RAW_SCHEMA="$RAW_SCHEMA" mise run "$build_task"
           fi

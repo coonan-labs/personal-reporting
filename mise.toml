@@ -5,9 +5,9 @@ opencode = "1.19.0"
 "databricks-cli" = "latest"
 
 [env]
-DBT_TARGET = "{% if env.DBT_TARGET %}{{ env.DBT_TARGET }}{% else %}dev-db{% endif %}"
-DBT_SCHEMA = "{% if env.DBT_SCHEMA %}{{ env.DBT_SCHEMA }}{% else %}reporting_dev{% endif %}"
-RAW_SCHEMA = "{% if env.RAW_SCHEMA %}{{ env.RAW_SCHEMA }}{% else %}raw_dev{% endif %}"
+DBT_TARGET = "{{ get_env(name='DBT_TARGET', default='dev-db') }}"
+DBT_SCHEMA = "{{ get_env(name='DBT_SCHEMA', default='reporting_dev') }}"
+RAW_SCHEMA = "{{ get_env(name='RAW_SCHEMA', default='raw_dev') }}"
 DBT_PROJECT_DIR = "{{ config_root }}/dbt"
 DBT_PROFILES_DIR = "{{ config_root }}/dbt"
 PYTHONUNBUFFERED = "1"
@@ -115,6 +115,12 @@ run = "uv run dbt build"
 [tasks.dbt-source-freshness]
 description = "Run dbt source freshness against DBT_TARGET (starts the Databricks warehouse)"
 depends = ["validate-target", "databricks-start"]
+raw_args = true
+run = "uv run dbt source freshness"
+
+[tasks.dbt-source-freshness-md]
+description = "Run dbt source freshness against a MotherDuck DBT_TARGET (no warehouse start)"
+depends = ["validate-motherduck-target"]
 raw_args = true
 run = "uv run dbt source freshness"
 
