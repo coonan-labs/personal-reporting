@@ -265,9 +265,7 @@ def test_get_destination_motherduck_normalizes_database_and_passes_token(
 ):
     """A md:-prefixed database is normalized and the token is passed explicitly."""
     monkeypatch.setattr("pipelines.runner.DBT_TARGET", "test-md")
-    monkeypatch.setenv(
-        "DESTINATION__MOTHERDUCK__CREDENTIALS__DATABASE", "md:other-db"
-    )
+    monkeypatch.setenv("DESTINATION__MOTHERDUCK__CREDENTIALS__DATABASE", "md:other-db")
     monkeypatch.setenv("MOTHERDUCK_TOKEN", "tok-123")
 
     destination = get_destination()

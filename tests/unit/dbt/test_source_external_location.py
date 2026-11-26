@@ -43,6 +43,7 @@ def _parse_manifest(target: str, tmp_path: Path) -> dict:
     dbt = _dbt_executable()
     if dbt is None:
         pytest.skip("dbt is not installed")
+    assert dbt is not None
     env = os.environ.copy()
     env["TZ"] = "UTC"
     # Parse only renders the profile; a dummy token is enough (no connection).
@@ -75,9 +76,7 @@ def _parse_manifest(target: str, tmp_path: Path) -> dict:
 
 def _source_external_locations(manifest: dict) -> dict[tuple[str, str], object]:
     return {
-        (node["source_name"], node["name"]): node.get("config", {}).get(
-            "external_location"
-        )
+        (node["source_name"], node["name"]): node.get("config", {}).get("external_location")
         for node in manifest.get("sources", {}).values()
     }
 

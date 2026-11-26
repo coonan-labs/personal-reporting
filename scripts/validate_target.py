@@ -10,7 +10,7 @@ from pathlib import Path
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(PROJECT_ROOT))
 
-from pipelines.targets import validate_target
+from pipelines.targets import validate_target  # noqa: E402
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -33,8 +33,7 @@ def main(argv: list[str] | None = None) -> int:
         target = os.getenv("DBT_TARGET") or ""
         if not target.endswith(args.require_suffix):
             raise SystemExit(
-                f"DBT_TARGET must end in {args.require_suffix!r} for this task "
-                f"(got {target!r})"
+                f"DBT_TARGET must end in {args.require_suffix!r} for this task (got {target!r})"
             )
     return 0
 
