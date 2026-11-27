@@ -28,14 +28,16 @@ permissions:
 
 jobs:
   run-pipeline:
-    # Production environment (issue #174): configure required reviewers
-    # and deployment branch restrictions on the `production` environment
-    # in repo settings. Only manual dispatches require it: scheduled runs
-    # always execute from `main`, so a workflow modified on a branch
-    # cannot be scheduled, and gating them would mean approving every
-    # Monday load by hand. Same conditional idiom as
-    # manual-load-transform.yml.
-    environment: ${{ github.event_name == 'workflow_dispatch' && 'production' || 'development' }}
+    # Environment selection (issue #174): manual dispatches use the
+    # gated `production` environment (required reviewers); scheduled
+    # runs use `production-scheduled`, which holds the same prod
+    # secrets but has no approval gate — they always execute from
+    # `main`, so a workflow modified on a branch cannot be scheduled.
+    # `production-scheduled` should still be branch-restricted to
+    # `main`. Prod credentials live in environment secrets, not
+    # repo-level secrets, so jobs that don't reference one of these
+    # environments cannot read them.
+    environment: ${{ github.event_name == 'workflow_dispatch' && 'production' || 'production-scheduled' }}
     runs-on: ubuntu-latest
     env:
       MISE_ENABLE_TOOLS: uv,python,databricks-cli

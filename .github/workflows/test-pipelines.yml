@@ -21,6 +21,9 @@ permissions:
 # #174). Fork PRs still get the offline unit tests and mock builds.
 jobs:
   test-pipelines:
+    # Dev credentials come from the `development` environment's secrets;
+    # prod credentials are never available to this job (issue #174).
+    environment: development
     timeout-minutes: 20
     runs-on: ubuntu-latest
     env:

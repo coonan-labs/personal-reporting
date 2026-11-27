@@ -22,6 +22,9 @@ concurrency:
 
 jobs:
   test_dbt:
+    # Dev credentials come from the `development` environment's secrets;
+    # prod credentials are never available to this job (issue #174).
+    environment: development
     runs-on: ubuntu-latest
     env:
       DBT_PROJECT_DIR: dbt
