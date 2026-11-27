@@ -30,9 +30,12 @@ jobs:
   run-pipeline:
     # Production environment (issue #174): configure required reviewers
     # and deployment branch restrictions on the `production` environment
-    # in repo settings. This job always targets prod, so it always
-    # requires that environment.
-    environment: production
+    # in repo settings. Only manual dispatches require it: scheduled runs
+    # always execute from `main`, so a workflow modified on a branch
+    # cannot be scheduled, and gating them would mean approving every
+    # Monday load by hand. Same conditional idiom as
+    # manual-load-transform.yml.
+    environment: ${{ github.event_name == 'workflow_dispatch' && 'production' || 'development' }}
     runs-on: ubuntu-latest
     env:
       MISE_ENABLE_TOOLS: uv,python,databricks-cli
