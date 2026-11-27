@@ -18,8 +18,20 @@ anchors:
     method: service-account
     project: "{{ env_var('GCP_PROJECT_ID') }}"
     keyfile: "{{ env_var('GOOGLE_APPLICATION_CREDENTIALS') }}"
+  # MotherDuck configuration (dbt-duckdb adapter, md: connection string).
+  # Database from DESTINATION__MOTHERDUCK__CREDENTIALS__DATABASE (default
+  # personal). Bare names are preferred, but leading `md://`, `md:/`, or `md:`
+  # prefixes are stripped here to match
+  # pipelines.runner.normalize_motherduck_database.
+  # Token from MOTHERDUCK_TOKEN; both are required for the -md targets.
+  - &motherduck_config
+    type: duckdb
+    path: "md:{{ (env_var('DESTINATION__MOTHERDUCK__CREDENTIALS__DATABASE', 'personal') | trim | replace('md://', '') | replace('md:/', '') | replace('md:', '') | trim) or 'personal' }}"
+    motherduck_token: "{{ env_var('MOTHERDUCK_TOKEN') }}"
+    schema: "{{ env_var('DBT_SCHEMA', 'reporting') }}"
+    threads: 4
 personal:
-  target: "{{ env_var('DBT_TARGET', 'dev') }}"
+  target: "{{ env_var('DBT_TARGET', 'dev-md') }}"
   outputs:
     mock:
       type: duckdb
@@ -29,13 +41,13 @@ personal:
       # (TZ=UTC); profile `settings` do not apply session-scoped
       # settings like TimeZone under dbt 2.x.
     # Primary targets - Databricks Unity Catalog
-    dev:
+    dev-db:
       # Use the same token-based connection settings as the dlt destination.
       <<: *databricks_config
       token:
         "{{ env_var('DESTINATION__DATABRICKS__CREDENTIALS__ACCESS_TOKEN') }}"
       schema: "{{ env_var('DBT_SCHEMA', 'reporting_dev') }}"
-    test:
+    test-db:
       <<: *databricks_config
       client_id:
         "{{ env_var('DESTINATION__DATABRICKS__CREDENTIALS__CLIENT_ID') }}"
@@ -43,7 +55,7 @@ personal:
         "{{ env_var('DESTINATION__DATABRICKS__CREDENTIALS__CLIENT_SECRET') }}"
       auth_type: oauth
       schema: "{{ env_var('DBT_SCHEMA', 'reporting_test') }}"
-    prod:
+    prod-db:
       <<: *databricks_config
       client_id:
         "{{ env_var('DESTINATION__DATABRICKS__CREDENTIALS__CLIENT_ID') }}"
@@ -64,3 +76,13 @@ personal:
       <<: *bigquery_config
       dataset: "{{ env_var('DBT_SCHEMA', 'reporting') }}"
       threads: 4
+    # MotherDuck targets - primary path after the #145 migration
+    dev-md:
+      <<: *motherduck_config
+      schema: "{{ env_var('DBT_SCHEMA', 'reporting_dev') }}"
+    test-md:
+      <<: *motherduck_config
+      schema: "{{ env_var('DBT_SCHEMA', 'reporting_test') }}"
+    prod-md:
+      <<: *motherduck_config
+      schema: "{{ env_var('DBT_SCHEMA', 'reporting') }}"

@@ -4,10 +4,10 @@ Source freshness measures data age from dlt's load metadata: each raw row's
 ``_dlt_load_id`` is joined to dlt's ``_dlt_loads`` table and the latest
 completed load's ``inserted_at`` is compared against the SLA thresholds.
 
-The ``loaded_at_query`` must reference ``_dlt_loads`` as a per-part quoted
-multipart identifier. On Databricks a single backtick span that contains dots
-(`` `workspace.raw._dlt_loads` ``) is parsed as ONE identifier rather than a
-catalog.schema.table path, so the lookup fails with TABLE_OR_VIEW_NOT_FOUND.
+The ``loaded_at_query`` must quote each part of the ``_dlt_loads`` multipart
+identifier with the active adapter's quote character. Hardcoded backticks fail
+on DuckDB/MotherDuck, while a single backtick span containing dots is parsed as
+ONE identifier rather than a catalog.schema.table path on Databricks.
 """
 
 from __future__ import annotations
@@ -156,23 +156,31 @@ def test_loaded_at_query_does_not_coalesce(name: str, rel: str) -> None:
 
 
 @pytest.mark.parametrize(("name", "rel"), SOURCES)
-def test_dlt_loads_referenced_with_per_part_quoting(name: str, rel: str) -> None:
+def test_dlt_loads_referenced_with_adapter_quoting(name: str, rel: str) -> None:
     query = _source(name, rel)["config"]["loaded_at_query"]
-    assert "`{{ this.database }}`.`{{ this.schema }}`.`_dlt_loads`" in query
-    assert "`{{ this.database }}.{{ this.schema }}._dlt_loads`" not in query, (
-        f"{name}: `_dlt_loads` is referenced inside a single backtick span that "
-        "contains dots. Databricks parses it as one identifier, so the table "
-        "resolves to nothing (TABLE_OR_VIEW_NOT_FOUND). Quote each part "
-        "separately: `catalog`.`schema`.`table`."
+    assert (
+        "{{ adapter.quote(this.database) }}.{{ adapter.quote(this.schema) }}"
+        ".{{ adapter.quote('_dlt_loads') }}"
+    ) in query
+    assert "`" not in query, (
+        f"{name}: `_dlt_loads` must not be hardcoded with backticks; DuckDB "
+        "and MotherDuck reject them."
     )
 
 
 def _render_for_duckdb(query: str) -> str:
-    """Substitute dbt Jinja and adapt the Databricks identifier for DuckDB."""
-    query = query.replace(
-        "`{{ this.database }}`.`{{ this.schema }}`.`_dlt_loads`", "raw._dlt_loads"
+    """Substitute dbt Jinja and render adapter.quote for DuckDB.
+
+    The query keeps the real three-part database.schema.table relation so the
+    execution test covers the form used on MotherDuck.
+    """
+    adapter_quoted = (
+        "{{ adapter.quote(this.database) }}.{{ adapter.quote(this.schema) }}"
+        ".{{ adapter.quote('_dlt_loads') }}"
     )
-    query = query.replace("{{ this }}", "raw_contacts")
+    assert adapter_quoted in query
+    query = query.replace(adapter_quoted, '"personal"."raw_dev"."_dlt_loads"')
+    query = query.replace("{{ this }}", '"personal"."raw_dev"."hubspot__contacts"')
     return query
 
 
@@ -181,21 +189,27 @@ def test_loaded_at_query_executes_against_duckdb() -> None:
 
     with tempfile.TemporaryDirectory() as tmp:
         con = duckdb.connect(str(Path(tmp) / "freshness.duckdb"))
-        con.execute("CREATE SCHEMA raw")
+        con.execute(f"ATTACH '{Path(tmp) / 'personal.duckdb'}' AS personal")
+        con.execute("CREATE SCHEMA personal.raw_dev")
         con.execute(
-            "CREATE OR REPLACE TABLE raw._dlt_loads "
+            "CREATE OR REPLACE TABLE personal.raw_dev._dlt_loads "
             "(load_id VARCHAR, status INTEGER, inserted_at TIMESTAMP)"
         )
-        con.execute("CREATE OR REPLACE TABLE raw_contacts (id INTEGER, _dlt_load_id VARCHAR)")
         con.execute(
-            "INSERT INTO raw._dlt_loads VALUES "
+            "CREATE OR REPLACE TABLE personal.raw_dev.hubspot__contacts "
+            "(id INTEGER, _dlt_load_id VARCHAR)"
+        )
+        con.execute(
+            "INSERT INTO personal.raw_dev._dlt_loads VALUES "
             "('ok', 0, TIMESTAMP '2026-10-18 02:00:00'), "
             "('failed', 1, TIMESTAMP '2026-10-19 02:00:00')"
         )
-        con.execute("INSERT INTO raw_contacts VALUES (1, 'ok'), (2, 'failed')")
+        con.execute(
+            "INSERT INTO personal.raw_dev.hubspot__contacts VALUES (1, 'ok'), (2, 'failed')"
+        )
 
         result = con.execute(query).fetchone()[0]
         assert result == datetime(2026, 10, 18, 2, 0, 0)
 
-        con.execute("UPDATE raw._dlt_loads SET status = 1 WHERE load_id = 'ok'")
+        con.execute("UPDATE personal.raw_dev._dlt_loads SET status = 1 WHERE load_id = 'ok'")
         assert con.execute(query).fetchone()[0] is None

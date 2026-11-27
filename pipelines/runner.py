@@ -6,13 +6,14 @@ and refresh execution are centralized.
 
 from __future__ import annotations
 
+import os
 from collections.abc import Callable
 from dataclasses import dataclass
 from logging import getLogger
 from typing import Any
 
 import dlt
-from dlt.destinations import databricks
+from dlt.destinations import databricks, motherduck
 
 from pipelines import DBT_SCHEMA, DBT_TARGET, RAW_SCHEMA, SECRET_STORE
 from pipelines.common.utils import (
@@ -85,6 +86,64 @@ def get_databricks_staging_volume(dataset_name: str) -> str:
     return f"{catalog}.{dataset_name}.staging"
 
 
+def is_motherduck_target(target: str | None = None) -> bool:
+    """Return True when the target is a MotherDuck target (``*-md``)."""
+    return (DBT_TARGET if target is None else target).endswith("-md")
+
+
+def normalize_motherduck_database(value: str | None) -> str:
+    """Return a bare MotherDuck database name.
+
+    The environment value must be a bare database name (``personal``). A
+    leading ``md://``, ``md:/``, or ``md:`` prefix is stripped defensively:
+    both dlt and dbt already prefix it when connecting, so ``md:personal``
+    would become the invalid ``md:md:personal``.
+    """
+    name = (value or "").strip()
+    if name.startswith("md://"):
+        name = name[5:]
+    elif name.startswith("md:/"):
+        name = name[4:]
+    elif name.startswith("md:"):
+        name = name[3:]
+    return name or "personal"
+
+
+def get_destination(target: str | None = None) -> Any:
+    """Return the dlt destination for ``target`` (default: ``DBT_TARGET``).
+
+    MotherDuck targets (``*-md``) load into the MotherDuck database named by
+    ``destination.motherduck.credentials.database`` (default ``personal``; a
+    bare name, see :func:`normalize_motherduck_database`). The token comes
+    from ``MOTHERDUCK_TOKEN`` with a ``dlt.secrets`` password fallback and is
+    required. All other ingestion targets use the Databricks destination with
+    a per-schema staging volume.
+    """
+    target = DBT_TARGET if target is None else target
+    if is_motherduck_target(target):
+        # Resolve through dlt.secrets first so .dlt/secrets.toml works, then
+        # fall back to the DuckDB-standard MOTHERDUCK_TOKEN env var.
+        token = dlt.secrets.get("destination.motherduck.credentials.password") or os.environ.get(
+            "MOTHERDUCK_TOKEN"
+        )
+        if not token:
+            raise RuntimeError(
+                "MOTHERDUCK_TOKEN is not set; it is required for MotherDuck "
+                "targets (DBT_TARGET ends in -md)"
+            )
+        return motherduck(
+            credentials={
+                "database": normalize_motherduck_database(
+                    dlt.secrets.get("destination.motherduck.credentials.database")
+                ),
+                "password": token,
+            },
+        )
+    return databricks(
+        staging_volume_name=get_databricks_staging_volume(RAW_SCHEMA),
+    )
+
+
 def run_refresh(
     *,
     source_factory: Callable,
@@ -145,9 +204,7 @@ def run_refresh(
         pipeline = dlt.pipeline(
             pipeline_name=pipeline_name,
             dataset_name=RAW_SCHEMA,
-            destination=databricks(
-                staging_volume_name=get_databricks_staging_volume(RAW_SCHEMA),
-            ),
+            destination=get_destination(DBT_TARGET),
             progress=progress,
         )
 

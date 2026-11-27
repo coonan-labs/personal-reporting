@@ -17,20 +17,23 @@
 [![Run Transformations](https://github.com/michaelconan/personal-reporting-pipelines/actions/workflows/run-transforms.yml/badge.svg)](https://github.com/michaelconan/personal-reporting-pipelines/actions/workflows/run-transforms.yml)
 
 Personal data integration and analytics platform using dlt (ingestion into
-Databricks Unity Catalog) and dbt (transformations on Databricks), orchestrated
-with GitHub Actions and managed locally with mise.
+MotherDuck, with Databricks Unity Catalog retained for the transition) and dbt
+(transformations on MotherDuck), orchestrated with GitHub Actions and managed
+locally with mise.
 
 ## Overview
 
 This repository contains a Docker Development Container for VSCode and the
-infrastructure and workflows for my personal data platform. It uses Databricks
-for raw data ingestion and storage, 1Password Environments for workflow
-credentials, and mise for repeatable local and CI commands.
+infrastructure and workflows for my personal data platform. It uses MotherDuck
+for raw data ingestion and storage, with Databricks Unity Catalog retained for
+the transition, 1Password Environments for workflow credentials, and mise for
+repeatable local and CI commands.
 
 ## Data Sources
 
-The following data will be ingested from my personal systems into a Databricks
-warehouse (Unity Catalog) for automation and analysis.
+The following data will be ingested from my personal systems into a MotherDuck
+warehouse (Databricks Unity Catalog retained for the transition) for automation
+and analysis.
 
 1. Notion
 2. HubSpot
@@ -41,14 +44,15 @@ warehouse (Unity Catalog) for automation and analysis.
 ### Data Pipeline Stack
 
 1. **[dlt hub](https://dlthub.com/docs/intro)** - Extract, normalise, and load
-   source data into Databricks raw layer
+   source data into the MotherDuck raw layer (Databricks retained for transition)
 2. **[dbt core](https://docs.getdbt.com/)** - Transform raw data into
    analytics-ready models and views
-3. **[Databricks](https://www.databricks.com/)** - Lakehouse platform for
-   storage and analysis
-4. **[1Password Environments](https://developer.1password.com/docs/cli/reference/)** -
+3. **[MotherDuck](https://motherduck.com/)** - Primary cloud data warehouse
+4. **[Databricks](https://www.databricks.com/)** - Transition/rollback lakehouse
+   (Unity Catalog)
+5. **[1Password Environments](https://developer.1password.com/docs/cli/reference/)** -
    Secure environment variables supplied to commands with the 1Password CLI
-5. **[GitHub Actions](https://github.com/features/actions)** - Automated
+6. **[GitHub Actions](https://github.com/features/actions)** - Automated
    orchestration and scheduling of data pipelines
 
 ### Project Structure
@@ -153,7 +157,7 @@ of concerns:
    mise run pipeline -- notion --full             # one dlt source
    mise run pipeline-all                          # all three dlt sources
    mise run dbt-build-mock                        # DuckDB fixture build
-   mise run dbt-build                             # starts SQL warehouse, uses DBT_TARGET (default dev)
+   mise run dbt-build                             # uses DBT_TARGET (default dev-md); starts the SQL warehouse only for *-db
    mise run docs                                  # dbt + Sphinx documentation
    ```
 
@@ -163,7 +167,7 @@ of concerns:
    ```bash
    export GCP_PROJECT_ID=your-project-id
    export GOOGLE_APPLICATION_CREDENTIALS=/path/to/service/account/key.json
-   export DBT_TARGET=dev
+   export DBT_TARGET=dev-db
    export DBT_SCHEMA=reporting_dev
    export RAW_SCHEMA=raw_dev
    ```
@@ -203,8 +207,10 @@ before removing an ephemeral environment and restore them later.
     sbx secret set-custom databricks-token --command 'powershell.exe -NoProfile -Command C:\Tools\Get-DatabricksToken.ps1' --refresh 30m --env DESTINATION__DATABRICKS__CREDENTIALS__ACCESS_TOKEN
    ```
 
-   For dbt `test` and `prod` targets, the profiles read the same dlt-style
-   `DESTINATION__DATABRICKS__CREDENTIALS__CLIENT_ID` and
+   MotherDuck targets (`dev-md`/`test-md`/`prod-md`, the defaults) read
+   `MOTHERDUCK_TOKEN` and `DESTINATION__MOTHERDUCK__CREDENTIALS__DATABASE`
+   (default `personal`). For dbt `test-db` and `prod-db` targets, the profiles
+   read the same dlt-style `DESTINATION__DATABRICKS__CREDENTIALS__CLIENT_ID` and
    `DESTINATION__DATABRICKS__CREDENTIALS__CLIENT_SECRET` variables. The
    warehouse preflight maps them to Databricks CLI variables when starting
    the warehouse. Set `OP_ENVIRONMENT_ID` to the 1Password Environment ID used
@@ -221,7 +227,7 @@ before removing an ephemeral environment and restore them later.
    or `opencode run "..."`. Credentialed tasks use
    `op run --environment "$OP_ENVIRONMENT_ID" -- ...`.
    Review via `git fetch sandbox-<name>` before push/PR.
-   Default to `DBT_TARGET=mock` inside sandboxes.
+   The repository default is `dev-md`; use `DBT_TARGET=mock` for offline sandbox work without MotherDuck access.
 
 Alternative: the restricted `.devcontainer/agent` "AI Agents" container
 (non-root, read-only root fs, no Docker socket) is also supported — see
@@ -287,8 +293,9 @@ gh aw run my-workflow
 
 ### Integrations
 
-1. **Databricks Unity Catalog** — primary destination for dlt and dbt
-2. **1Password Environments** — source and warehouse credentials for local and CI tasks
+1. **MotherDuck** — primary destination for dlt and dbt (`*-md` targets)
+2. **Databricks Unity Catalog** — transition/rollback destination (`*-db` targets)
+3. **1Password Environments** — source and warehouse credentials for local and CI tasks
 
 ## Pipeline Refresh Patterns
 

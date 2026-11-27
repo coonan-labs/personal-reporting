@@ -34,11 +34,14 @@ The convention applies to staging, core, intermediate, and marts. Union models a
 
 Models call `{{ source(source_name, relation_name) }}` directly; there is no `make_source` macro:
 
-- In mock (DuckDB) each source reads its test fixture via `config.external_location: dbt/test_fixtures/{source}/{identifier}.csv`.
-- In dev/test/prod (Databricks Unity Catalog) sources resolve to the raw schema
-  in catalog `workspace`.
+- In mock (DuckDB) each source reads its test fixture via `config.external_location: test_fixtures/{source}/{identifier}.csv` (relative to the dbt project directory).
+- In dev-db/test-db/prod-db (Databricks Unity Catalog) sources resolve to the raw schema
+  in the catalog from `DESTINATION__DATABRICKS__CREDENTIALS__CATALOG` (default `workspace`).
+- In dev-md/test-md/prod-md (MotherDuck) sources resolve to the raw schema in
+  the MotherDuck database named by `DESTINATION__MOTHERDUCK__CREDENTIALS__DATABASE`.
+- In dev-bq/test-bq/prod-bq (BigQuery) sources resolve to the raw schema (rollback path).
 
-Consequence: fixture filenames under `dbt/test_fixtures/{source}/` must match the source identifiers in `_*sources.yml`.
+Consequence: fixture files live under `dbt/test_fixtures/{source}/` and must match the source identifiers in `_*sources.yml`; the `external_location` value itself is relative to the dbt project (`test_fixtures/{source}/{identifier}.csv`).
 
 ## Seeds
 
@@ -77,8 +80,9 @@ mise run dbt-build-mock
 mise run dbt -- run --target mock --select stg_google_health__sleep
 ```
 
-To build against Databricks dev, run `mise run dbt-build`; this starts and
-waits for the SQL warehouse before dbt connects.
+`mise run dbt-build` builds against `DBT_TARGET` (default `dev-md`,
+MotherDuck). For `*-db` targets it starts and waits for the SQL warehouse
+before dbt connects; `-md` targets skip the warehouse preflight.
 
 - Generate docs:
 

@@ -1,17 +1,18 @@
 # Project Overview
 
-This repository contains the infrastructure and workflows for a personal data platform. It uses Databricks (Unity Catalog) as the primary data warehouse for raw data ingestion, storage, and transformations, with Google BigQuery retained as a rollback path. GCP Secret Manager and 1Password are used for secure credential management, with automated orchestration through GitHub Actions.
+This repository contains the infrastructure and workflows for a personal data platform. It uses MotherDuck as the primary data warehouse for raw data ingestion, storage, and transformations, with Databricks Unity Catalog retained for the transition and Google BigQuery retained as a rollback path. GCP Secret Manager and 1Password are used for secure credential management, with automated orchestration through GitHub Actions.
 
 ## Architecture
 
 ### Data Pipeline Stack
 
-1.  **[dlt hub](https://dlthub.com/docs/intro)** - Extract, load, and transform source data into Databricks raw layer (Unity Catalog)
+1.  **[dlt hub](https://dlthub.com/docs/intro)** - Extract, load, and transform source data into the MotherDuck raw layer (Databricks retained for transition)
 2.  **[dbt core](https://docs.getdbt.com/)** - Transform raw data into analytics-ready models and views
-3.  **[Databricks](https://www.databricks.com/)** - Lakehouse platform for storage and analysis (Unity Catalog)
-4.  **[Google BigQuery](https://cloud.google.com/bigquery)** - Retained as rollback target for dbt transformations
-5.  **[GCP Secret Manager / 1Password](https://cloud.google.com/secret-manager)** - Secure credential management for API keys and connections
-6.  **[GitHub Actions](https://github.com/features/actions)** - Automated orchestration and scheduling of data pipelines
+3.  **[MotherDuck](https://motherduck.com/)** - Primary cloud data warehouse
+4.  **[Databricks](https://www.databricks.com/)** - Transition/rollback lakehouse (Unity Catalog)
+5.  **[Google BigQuery](https://cloud.google.com/bigquery)** - Retained as rollback target for dbt transformations
+6.  **[GCP Secret Manager / 1Password](https://cloud.google.com/secret-manager)** - Secure credential management for API keys and connections
+7.  **[GitHub Actions](https://github.com/features/actions)** - Automated orchestration and scheduling of data pipelines
 
 ### Project Structure
 

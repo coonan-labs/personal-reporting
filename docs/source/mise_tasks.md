@@ -21,11 +21,14 @@ credentialed values through the selected 1Password Environment, or configure
 | `mise run test-live` | Opt-in integration tests against live APIs and temporary DuckDB |
 | `mise run test-e2e` | Live API + Databricks tests |
 | `mise run test-all` | Unit tests followed by e2e tests |
-| `mise run pipeline -- notion [args]` | Run one dlt source |
+| `mise run pipeline -- notion [args]` | Run one dlt source (starts the Databricks warehouse for `*-db` targets) |
+| `mise run pipeline-md -- notion [args]` | Run one dlt source into a MotherDuck target (no warehouse start) |
 | `mise run pipeline-all` | Run Notion, HubSpot, and Google Health |
 | `mise run dbt-build-mock` | Build/test dbt models with DuckDB fixtures |
-| `mise run dbt-build` | Build/test against `DBT_TARGET` (default `dev`) |
-| `mise run dbt-source-freshness` | Run source freshness against `DBT_TARGET` (default `dev`) |
+| `mise run dbt-build` | Build/test against `DBT_TARGET` (default `dev-md`; starts the Databricks warehouse for `*-db` targets) |
+| `mise run dbt-build-md` | Build/test against a MotherDuck `DBT_TARGET` (no warehouse start) |
+| `mise run dbt-source-freshness` | Run source freshness against `DBT_TARGET` (default `dev-md`; starts the Databricks warehouse for `*-db` targets) |
+| `mise run dbt-source-freshness-md` | Run source freshness against a MotherDuck `DBT_TARGET` (no warehouse start) |
 | `mise run dbt -- run --target mock --select <model>` | Pass a dbt command through mise |
 | `mise run dbt-lint` | Lint SQL with dbt's built-in linter |
 | `mise run dbt-bouncer` | Run dbt-bouncer checks |
@@ -34,11 +37,20 @@ credentialed values through the selected 1Password Environment, or configure
 | `mise run coverage` | Print coverage and generate HTML |
 | `mise run clean` | Remove local test/build/documentation artifacts |
 
-`DBT_TARGET` defaults to `dev`, with matching `DBT_SCHEMA=reporting_dev` and
-`RAW_SCHEMA=raw_dev` defaults for local work. Set all three together when
-targeting another environment; the scheduled workflows set them explicitly on
-their run steps. The pipeline, `dbt-build`, and `dbt-source-freshness` tasks
-validate that the target and schemas agree before running.
+`DBT_TARGET` defaults to `dev-md` (MotherDuck), with matching
+`DBT_SCHEMA=reporting_dev` and `RAW_SCHEMA=raw_dev` defaults for local work.
+Values set in the shell or on a CI run step take precedence over the defaults
+in mise's `[env]` block. Set all three together when targeting another
+environment; the scheduled workflows set them explicitly on their run steps.
+The pipeline, `pipeline-md`, `dbt-build`, `dbt-build-md`,
+`dbt-source-freshness`, and `dbt-source-freshness-md` tasks validate that the
+target and schemas agree before running. The generic `pipeline`, `dbt-build`,
+and `dbt-source-freshness` tasks start the Databricks SQL warehouse only for
+`*-db` targets; the `-md` tasks additionally require a MotherDuck target
+(``DBT_TARGET`` ending in ``-md``) and never start a warehouse.
+dlt pipeline names are shared across targets, so switching between `*-db`
+and `*-md` locally reuses the same `~/.dlt` state; use a full refresh or clear
+local dlt state when switching destinations.
 
 Credentialed tasks require `OP_SERVICE_ACCOUNT_TOKEN` and `OP_ENVIRONMENT_ID`.
 They run their commands using:
@@ -56,10 +68,10 @@ Databricks variables, including `DESTINATION__DATABRICKS__CREDENTIALS__SERVER_HO
 `DESTINATION__DATABRICKS__CREDENTIALS__CLIENT_SECRET`. The warehouse helper maps
 the dlt OAuth pair to the Databricks CLI's native `DATABRICKS_CLIENT_ID` and
 `DATABRICKS_CLIENT_SECRET` variables and selects OAuth M2M authentication.
-The dbt `test` and `prod` profiles read the dlt-style
+The dbt `test-db` and `prod-db` profiles read the dlt-style
 `DESTINATION__DATABRICKS__CREDENTIALS__CLIENT_ID` and
 `DESTINATION__DATABRICKS__CREDENTIALS__CLIENT_SECRET` variables directly; the
-`dev` profile continues to use the dlt access token.
+`dev-db` profile continues to use the dlt access token.
 
 The Databricks CLI task derives the warehouse ID from the dlt HTTP path, starts
 the SQL warehouse if needed, and waits for it to report `RUNNING` and `HEALTHY`.
@@ -69,7 +81,8 @@ soft-bounded by a 15-minute overall deadline (checked at loop boundaries,
 so it can overshoot by up to a CLI timeout plus a poll interval).
 For PAT authentication, it maps the dlt `ACCESS_TOKEN` to `DATABRICKS_TOKEN`.
 `pipeline`, `pipeline-all`, `test-e2e`, `dbt-build`, and `dbt-source-freshness`
-perform this preflight automatically. To start it separately, run
+perform this preflight automatically. The `pipeline-md` and `dbt-build-md`
+tasks skip it (no Databricks warehouse is involved) but require a `-md` target. To start it separately, run
 `mise run databricks-start`. The task command definitions are in `mise.toml`;
 `scripts/databricks_warehouse.py` handles the warehouse start/wait logic and
 the `docs` task builds Sphinx output and copies the dbt SPA. The dbt redirect is

@@ -60,7 +60,7 @@ def test_pipeline_config_uses_explicit_test_schemas():
 
 
 def test_pipeline_config_does_not_derive_schemas_from_target():
-    result = run_pipeline_config(DBT_TARGET="prod")
+    result = run_pipeline_config(DBT_TARGET="prod-db")
 
     assert result.returncode == 0
     assert result.stdout.strip() == "raw_dev reporting_dev"

@@ -4,7 +4,7 @@ This dbt project is designed to transform and model data from various sources, i
 
 ## Data Ingestion
 
-The raw data is ingested using `dlt` (data load tool), which means that the raw tables have a specific structure that the staging models are designed to handle. The primary destination is Databricks Unity Catalog (`workspace` catalog, `raw` schema in production); BigQuery targets remain available as a rollback path. For local testing, source tables are read directly from CSV test fixtures in `dbt/test_fixtures/` via DuckDB external locations (configured through each source's `config.external_location`).
+The raw data is ingested using `dlt` (data load tool), which means that the raw tables have a specific structure that the staging models are designed to handle. The primary destination is MotherDuck (`*-md` targets) after the #145 migration; Databricks Unity Catalog (`workspace` catalog, `*-db` targets) remains available for the transition and rollback, and BigQuery targets remain as a rollback path. For local testing, source tables are read directly from CSV test fixtures in `test_fixtures/` (relative to the dbt project) via DuckDB external locations (configured through each source's `config.external_location`).
 
 ## Layers
 
@@ -51,14 +51,21 @@ Conventions:
 
 This project is set up with a local testing environment using DuckDB. To run the project locally, you need to:
 1.  Run `mise install` and `mise run setup` to install the toolchain and Python dependencies.
-2.  Run `mise run dbt-build-mock` to exercise models and tests against the `dbt/test_fixtures/` CSVs.
+2.  Run `mise run dbt-build-mock` to exercise models and tests against the `test_fixtures/` CSVs.
 3.  Run `mise run docs` for the dbt + Sphinx docs site or `mise run dbt-bouncer` for governance checks.
 
-The local testing setup uses a `profiles.yml` file located in `dbt/profiles.yml`, which is configured to use a local DuckDB database file (`dbt.duckdb`).
+The local testing setup uses a `profiles.yml` file located in `dbt/profiles.yml`. The default target is `dev-md` (MotherDuck); use `--target mock` (or `mise run dbt-build-mock`) for a fully local DuckDB database file (`dbt.duckdb`).
 
-## Databricks authentication
+## MotherDuck authentication
 
-The `dev` target uses the dlt destination's access token. The `test` and `prod`
+The `dev-md`, `test-md`, and `prod-md` targets use `MOTHERDUCK_TOKEN` and
+`DESTINATION__MOTHERDUCK__CREDENTIALS__DATABASE` (default `personal`). The
+database value may be bare or prefixed with `md:`/`md://`; the profile strips
+the prefix. `dev-md` is the default dbt target.
+
+## Databricks authentication (transition/rollback)
+
+The `dev-db` target uses the dlt destination's access token. The `test-db` and `prod-db`
 targets use Databricks OAuth M2M with the dlt-style
 `DESTINATION__DATABRICKS__CREDENTIALS__CLIENT_ID` and
 `DESTINATION__DATABRICKS__CREDENTIALS__CLIENT_SECRET` variables. The warehouse

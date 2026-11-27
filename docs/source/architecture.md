@@ -3,21 +3,21 @@
 High-level architecture:
 
 Notion / HubSpot / Google Health APIs
-    ↓ (dlt pipelines → Databricks raw schema / Unity Catalog)
+    ↓ (dlt pipelines → MotherDuck raw schema; Databricks retained for transition)
 dbt Staging (views) → dbt Intermediate → dbt Marts (tables)
     ↓ MetricFlow semantic layer
 
 ## Components
 
-- dlt: extraction and direct-loading into Databricks (Unity Catalog). Keeps incremental state and supports full refreshes.
+- dlt: extraction and direct-loading into MotherDuck. Keeps incremental state and supports full refreshes; Databricks remains a transition/rollback destination.
 - dbt: transformations layered into staging, intermediate, and marts. Seeds and macros enable local dev.
-- Databricks: primary data warehouse (Unity Catalog); dlt stages data in a managed volume and loads into the raw schema. dbt transforms and marts run on Databricks. BigQuery targets retained for easy rollback path. DuckDB used for local dev target.
+- MotherDuck: primary data warehouse; dbt transforms and marts run against the `*-md` targets. Databricks Unity Catalog remains a transition/rollback destination, and BigQuery targets remain a rollback path. DuckDB is used for the local `mock` target.
 - GitHub Actions: scheduling and orchestration for weekly runs.
 
 ## Operational guidance
 
 - Ingest first, then run dbt transforms (workflows configured to enforce this order).
-- Use `mise run dbt-build` to validate transformations against Databricks dev.
+- Use `mise run dbt-build` to validate transformations against the default `dev-md` (MotherDuck) target, or set `DBT_TARGET` to a `*-db` target for Databricks.
 - Use `mise run dbt-build-mock` for local testing with CSV fixtures in DuckDB.
 - Maintain group_connect_cadence.csv as the single source of truth for group tier cadence targets.
 

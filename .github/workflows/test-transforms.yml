@@ -11,9 +11,14 @@ on:
       - 'scripts/databricks_warehouse.py'
       - 'scripts/validate_target.py'
       - 'pipelines/targets.py'
+      - 'tests/unit/dbt/test_source_external_location.py'
 
 permissions:
   contents: 'read'
+
+concurrency:
+  group: test-transforms-dev-md
+  cancel-in-progress: false
 
 jobs:
   test_dbt:
@@ -21,7 +26,7 @@ jobs:
     env:
       DBT_PROJECT_DIR: dbt
       DBT_PROFILES_DIR: dbt
-      MISE_ENABLE_TOOLS: uv,python,databricks-cli
+      MISE_ENABLE_TOOLS: uv,python
       # Skip the semantic-manifest validation notice (no dbt_cloud.yml in this project)
       DBT_ENGINE_NO_WARN_SEMANTIC_MANIFEST_VALIDATION: '1'
     steps:
@@ -39,8 +44,12 @@ jobs:
 
       - name: run local build (mock target with CSV fixtures)
         run: mise run dbt-build-mock
+
       - name: run local build with steps in gap detection (mock target)
         run: mise run dbt-build-mock-steps
+
+      - name: run dbt source manifest test
+        run: uv run pytest tests/unit/dbt/test_source_external_location.py -q
 
       - name: install 1Password CLI
         if: github.actor != 'dependabot[bot]'
@@ -48,12 +57,14 @@ jobs:
         with:
           version: latest
 
-      - name: run Databricks test build
+      # Uses the shared dev-md database; the concurrency group serializes runs
+      # because this job writes reporting_dev.
+      - name: run MotherDuck integration build (dev-md)
         if: github.actor != 'dependabot[bot]'
         env:
           OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
           OP_ENVIRONMENT_ID: ${{ vars.OP_ENVIRONMENT_ID }}
-          DBT_TARGET: test
-          DBT_SCHEMA: reporting_test
-          RAW_SCHEMA: raw_test
+          DBT_TARGET: dev-md
+          DBT_SCHEMA: reporting_dev
+          RAW_SCHEMA: raw_dev
         run: op run --environment "$OP_ENVIRONMENT_ID" -- env DBT_TARGET="$DBT_TARGET" DBT_SCHEMA="$DBT_SCHEMA" RAW_SCHEMA="$RAW_SCHEMA" mise run dbt-build

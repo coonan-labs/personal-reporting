@@ -1,13 +1,21 @@
 """Unit tests for the central pipeline runner and CLI interface."""
 
+import dataclasses
 from unittest.mock import ANY, MagicMock, patch
 
 import pytest
-from dlt.destinations import databricks
+from dlt.destinations import databricks, motherduck
 
 from pipelines import RAW_SCHEMA
 from pipelines.run_pipeline import main, parse_select
-from pipelines.runner import PIPELINE_CONFIG, get_databricks_staging_volume, refresh_pipeline
+from pipelines.runner import (
+    PIPELINE_CONFIG,
+    get_databricks_staging_volume,
+    get_destination,
+    is_motherduck_target,
+    normalize_motherduck_database,
+    refresh_pipeline,
+)
 
 
 def test_parse_select():
@@ -111,12 +119,9 @@ def test_runner_refresh_pipeline(mock_validate, mock_dlt_pipeline, mock_dlt_secr
     with patch.dict(
         PIPELINE_CONFIG,
         {
-            "notion": PIPELINE_CONFIG["notion"].__class__(
+            "notion": dataclasses.replace(
+                PIPELINE_CONFIG["notion"],
                 source_factory=MagicMock(return_value=mock_notion_source),
-                pipeline_name="notion_habits_pipeline",
-                display_name="Notion Habits",
-                required_secret_keys=["sources.notion.api_key"],
-                source_kwargs={"db_name": "Disciplines"},
             )
         },
     ):
@@ -184,11 +189,9 @@ def test_runner_supports_direct_token_skips_secret_validation(
     with patch.dict(
         PIPELINE_CONFIG,
         {
-            "google_health": PIPELINE_CONFIG["google_health"].__class__(
+            "google_health": dataclasses.replace(
+                PIPELINE_CONFIG["google_health"],
                 source_factory=fake_source,
-                pipeline_name="google_health_v4_pipeline",
-                display_name="Google Health v4",
-                required_secret_keys=["sources.google_health.client_id"],
                 token_getter=MagicMock(return_value="direct-token"),
                 supports_direct_token=True,
             )
@@ -204,9 +207,127 @@ def test_runner_supports_direct_token_skips_secret_validation(
         mock_validate.assert_not_called()
 
 
+@patch("pipelines.runner.dlt.secrets.get")
+@patch("pipelines.runner.dlt.pipeline")
+@patch("pipelines.runner.validate_required_secrets")
+def test_runner_refresh_pipeline_uses_motherduck_destination_for_md_target(
+    mock_validate, mock_dlt_pipeline, mock_dlt_secrets_get, monkeypatch
+):
+    """MotherDuck targets load via the motherduck destination, not Databricks."""
+    monkeypatch.setattr("pipelines.runner.DBT_TARGET", "dev-md")
+    monkeypatch.setattr("pipelines.runner.DBT_SCHEMA", "reporting_dev")
+    monkeypatch.setattr("pipelines.runner.RAW_SCHEMA", "raw_dev")
+    monkeypatch.setenv("MOTHERDUCK_TOKEN", "test-token")
+    monkeypatch.delenv("DESTINATION__MOTHERDUCK__CREDENTIALS__DATABASE", raising=False)
+    mock_dlt_secrets_get.side_effect = lambda _key: None
+
+    mock_pipeline_instance = MagicMock()
+    mock_dlt_pipeline.return_value = mock_pipeline_instance
+    mock_pipeline_instance.run.return_value = "Loaded 10 rows"
+
+    mock_notion_source = MagicMock()
+    mock_notion_source.with_resources.return_value = mock_notion_source
+
+    with patch.dict(
+        PIPELINE_CONFIG,
+        {
+            "notion": dataclasses.replace(
+                PIPELINE_CONFIG["notion"],
+                source_factory=MagicMock(return_value=mock_notion_source),
+            )
+        },
+    ):
+        info = refresh_pipeline("notion", is_incremental=True)
+
+    assert info == "Loaded 10 rows"
+    mock_dlt_pipeline.assert_called_once_with(
+        pipeline_name="notion_habits_pipeline",
+        dataset_name="raw_dev",
+        destination=ANY,
+        progress="log",
+    )
+    destination = mock_dlt_pipeline.call_args.kwargs["destination"]
+    assert isinstance(destination, motherduck)
+    assert destination.config_params["credentials"] == {
+        "database": "personal",
+        "password": "test-token",
+    }
+    # The Databricks staging volume path must not run for MotherDuck targets.
+    assert "destination.databricks.credentials.catalog" not in [
+        call.args[0] for call in mock_dlt_secrets_get.call_args_list
+    ]
+
+
+def test_get_destination_motherduck_normalizes_database_and_passes_token(
+    monkeypatch,
+):
+    """A md:-prefixed database is normalized and the token is passed explicitly."""
+    monkeypatch.setattr("pipelines.runner.DBT_TARGET", "test-md")
+    monkeypatch.setenv("DESTINATION__MOTHERDUCK__CREDENTIALS__DATABASE", "md:other-db")
+    monkeypatch.setenv("MOTHERDUCK_TOKEN", "tok-123")
+
+    destination = get_destination()
+
+    assert isinstance(destination, motherduck)
+    assert destination.config_params["credentials"] == {
+        "database": "other-db",
+        "password": "tok-123",
+    }
+
+
+def test_get_destination_accepts_explicit_target(monkeypatch):
+    """An explicit target wins over the import-time module target."""
+    monkeypatch.setattr("pipelines.runner.DBT_TARGET", "dev-db")
+    monkeypatch.setenv("MOTHERDUCK_TOKEN", "test-token")
+
+    destination = get_destination("dev-md")
+
+    assert isinstance(destination, motherduck)
+
+
+def test_get_destination_motherduck_requires_token(monkeypatch):
+    """A missing MOTHERDUCK_TOKEN fails fast instead of at connect time."""
+    monkeypatch.setattr("pipelines.runner.DBT_TARGET", "dev-md")
+    monkeypatch.delenv("MOTHERDUCK_TOKEN", raising=False)
+    monkeypatch.setattr("pipelines.runner.dlt.secrets.get", lambda _key: None)
+
+    with pytest.raises(RuntimeError, match="MOTHERDUCK_TOKEN is not set"):
+        get_destination()
+
+
+@pytest.mark.parametrize(
+    ("value", "expected"),
+    [
+        ("personal", "personal"),
+        ("md:personal", "personal"),
+        ("md://personal", "personal"),
+        ("md:/personal", "personal"),
+        ("  personal  ", "personal"),
+        (None, "personal"),
+        ("", "personal"),
+    ],
+)
+def test_normalize_motherduck_database(value, expected):
+    assert normalize_motherduck_database(value) == expected
+
+
+@pytest.mark.parametrize(
+    ("target", "expected"),
+    [
+        ("dev-md", True),
+        ("test-md", True),
+        ("prod-md", True),
+        ("dev-db", False),
+        ("mock", False),
+    ],
+)
+def test_is_motherduck_target(target, expected):
+    assert is_motherduck_target(target) is expected
+
+
 def test_refresh_pipeline_rejects_target_schema_mismatch(monkeypatch):
     """Direct ingestion must not silently write schemas that disagree with the target."""
-    monkeypatch.setattr("pipelines.runner.DBT_TARGET", "prod")
+    monkeypatch.setattr("pipelines.runner.DBT_TARGET", "prod-db")
     monkeypatch.setattr("pipelines.runner.DBT_SCHEMA", "reporting_dev")
     monkeypatch.setattr("pipelines.runner.RAW_SCHEMA", "raw_dev")
 

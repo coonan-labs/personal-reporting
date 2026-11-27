@@ -1,22 +1,23 @@
 # Personal Reporting Pipelines - AI Agent Context
 
 ## Project Overview
-Personal data integration and analytics platform tracking personal disciplines/habits across three sources. Uses dlt for extraction into Databricks (Unity Catalog) and dbt for transformation.
+Personal data integration and analytics platform tracking personal disciplines/habits across three sources. Uses dlt for extraction into MotherDuck (with Databricks Unity Catalog retained for the transition) and dbt for transformation.
 
 ## Architecture
 ```
 Notion / HubSpot / Google Health APIs
-    ↓ (dlt pipelines → Databricks raw schema / Unity Catalog)
+    ↓ (dlt pipelines → MotherDuck raw schema; Databricks retained for transition)
 dbt Staging (views) → dbt Intermediate → dbt Marts (tables)
     ↓ MetricFlow semantic layer
 ```
 
 ## Target Configuration
-**Primary target**: Databricks Unity Catalog (`dev`, `test`, `prod` targets)
+**Primary target**: MotherDuck (`dev-md`, `test-md`, `prod-md` targets) — primary path after the #145 migration
+**Transition/retained target**: Databricks Unity Catalog (`dev-db`, `test-db`, `prod-db` targets)
 **Rollback targets**: BigQuery (`dev-bq`, `test-bq`, `prod-bq` targets) — retained for easy rollback path
 **Local development**: DuckDB (`mock` target) with CSV test fixtures
 
-Default target is `dev` (Databricks). Use `DBT_TARGET` to select the target and set the matching `DBT_SCHEMA` / `RAW_SCHEMA`; local defaults are `reporting_dev` / `raw_dev`.
+Default target is `dev-md` (MotherDuck). MotherDuck targets (`dev-md`/`test-md`/`prod-md`) use `DESTINATION__MOTHERDUCK__CREDENTIALS__DATABASE` (default `personal`; bare names are preferred and `md:`/`md://` prefixes are normalized) and `MOTHERDUCK_TOKEN`. Use `DBT_TARGET` to select the target and set the matching `DBT_SCHEMA` / `RAW_SCHEMA`; local defaults are `reporting_dev` / `raw_dev`. dlt pipeline names are shared across targets, so switching between `*-db` and `*-md` locally reuses the same `~/.dlt` state; use a full refresh or clear local state when switching destinations.
 
 ## GitHub Agentic Workflows (gh-aw)
 Scheduled AI-driven automation uses [gh-aw](https://github.com/github/gh-aw). Each workflow is a `.md` source file (frontmatter + agent prompt) compiled to a `.lock.yml` GitHub Actions file. Engine for this project: **Gemini** (`GEMINI_API_KEY` secret required).
@@ -33,15 +34,16 @@ Current agentic workflow: `weekly-doc-updater` — runs every Monday, opens a PR
 - `pipelines/hubspot.py` — HubSpot CRM extraction (per-object: meetings, calls, etc.)
 - `pipelines/google_health.py` — Google Health sleep/steps/exercise extraction
 - `pipelines/hs_config.yml` — HubSpot object/property config
-- `pipelines/__init__.py` — Shared constants: BASE_DATE, RAW_SCHEMA, DBT_SCHEMA
+- `pipelines/__init__.py` — Shared constants: BASE_DATE, DBT_TARGET, DBT_SCHEMA, RAW_SCHEMA
 - `dbt/seeds/group_connect_cadence.csv` — Target connection cadence per group tier
 - `dbt/dbt_project.yml` — dbt config (profile, materializations, vars)
-- `dbt/profiles.yml` — dev/test/prod=Databricks, dev-bq/test-bq/prod-bq=BigQuery (rollback), mock=DuckDB
+- `dbt/profiles.yml` — dev-db/test-db/prod-db=Databricks, dev-bq/test-bq/prod-bq=BigQuery (rollback), dev-md/test-md/prod-md=MotherDuck, mock=DuckDB
 
 ## Source Resolution (no make_source macro)
 There is no `make_source` macro. Models call `{{ source(source_name, relation_name) }}` directly for every target:
-- **mock (DuckDB)**: each source reads its test fixture via `config.external_location: dbt/test_fixtures/{source}/{identifier}.csv`.
-- **dev/test/prod (Databricks)**: sources resolve to the raw schema in Unity Catalog.
+- **mock (DuckDB)**: each source reads its test fixture via `config.external_location: test_fixtures/{source}/{identifier}.csv` (relative to the dbt project).
+- **dev-db/test-db/prod-db (Databricks)**: sources resolve to the raw schema in Unity Catalog.
+- **dev-md/test-md/prod-md (MotherDuck)**: sources resolve to the raw schema in the MotherDuck database named by `DESTINATION__MOTHERDUCK__CREDENTIALS__DATABASE` (default `personal`).
 - **dev-bq/test-bq/prod-bq (BigQuery)**: sources resolve to the raw schema (rollback path).
 
 **Consequence**: fixtures in `dbt/test_fixtures/{source}/` MUST be named after the source identifiers in `_*sources.yml`.
@@ -141,7 +143,7 @@ Note: habit completions and thresholds come from the Notion habit reference data
 - `mise run pipeline -- <notion|hubspot|google_health> [args]` — run one dlt pipeline with a 1Password Environment
 - `mise run dbt-build-mock` — local dbt build (DuckDB + CSV test fixtures)
 - `mise run dbt -- run --target mock --select <model>` — run a specific dbt model
-- `mise run dbt-build` — build against `DBT_TARGET` (defaults to `dev`) after starting the SQL warehouse
+- `mise run dbt-build` — build against `DBT_TARGET` (defaults to `dev-md`); the SQL warehouse starts only for `*-db` targets
 - `mise run dbt-source-freshness` — run dbt source freshness against `DBT_TARGET`
 - `mise run dbt-lint` — SQL linting with the dbt 2.x Rust parser and real dbt templating; reuses `dbt/.sqlfluff`. The `sqlfluff`/`sqlfluff-templater-dbt` PyPI packages are not installed because `sqlfluff-templater-dbt` requires Python `dbt-core` and cannot coexist with dbt 2.x, while standalone sqlfluff cannot resolve package macros.
 - `mise run docs` — dbt docs site (v2 SPA) + Sphinx docs
@@ -157,7 +159,7 @@ Note: habit completions and thresholds come from the Notion habit reference data
 ## Tech Stack
 - **Data Ingestion**: dlt (Python)
 - **Data Transformation**: dbt 2.x (Rust engine, installed via the `dbt` PyPI distribution)
-- **Data Warehouse**: Databricks Unity Catalog (primary), Google BigQuery (rollback)
+- **Data Warehouse**: MotherDuck (primary), Databricks Unity Catalog (transition/rollback), Google BigQuery (rollback)
 - **Orchestration**: GitHub Actions
 - **Secret Management**: GCP Secret Manager or 1Password (configured via `SECRET_STORE` env var)
 - **Development**: Python 3.13, uv, VSCode Dev Containers
@@ -172,7 +174,7 @@ Note: habit completions and thresholds come from the Notion habit reference data
 - All pipeline functions accept `is_incremental: Optional[bool] = None`; use `get_refresh_mode()` when `None`
 
 ### SQL (SQLFluff)
-- Dialect: BigQuery (rollback targets), DuckDB (dev), Databricks (primary)
+- Dialect: DuckDB/MotherDuck (primary), Databricks (transition), BigQuery (rollback)
 - Keywords: lowercase; identifiers: lowercase with underscores
 - Line length: 80; indentation: 4 spaces; trailing commas; explicit aliasing
 
@@ -228,7 +230,7 @@ they are essential for ANY work in this project
 Credentialed mise tasks run as `op run --environment "$OP_ENVIRONMENT_ID" -- ...`; the 1Password Environment exports the dlt source and Databricks environment variables. GitHub Actions uses `OP_SERVICE_ACCOUNT_TOKEN` plus the repository variable `OP_ENVIRONMENT_ID`. The 1Password CLI must support Environments.
 
 - **Local**: export `OP_ENVIRONMENT_ID` and `OP_SERVICE_ACCOUNT_TOKEN`, then use `mise run pipeline`, `mise run test-e2e`, or Databricks dbt tasks. `.env.databricks` is deprecated; credentialed values come from the selected 1Password Environment or `sbx` secrets.
-- **Warehouse preflight**: `scripts/databricks_warehouse.py` maps dlt's `DESTINATION__DATABRICKS__CREDENTIALS__*` values to native Databricks CLI authentication variables and starts the configured SQL warehouse before e2e, pipeline, and Databricks dbt runs. For dbt `test`/`prod`, the profiles read the dlt-style `DESTINATION__DATABRICKS__CREDENTIALS__CLIENT_ID` and `DESTINATION__DATABRICKS__CREDENTIALS__CLIENT_SECRET` directly; `dev` uses the dlt access token.
+- **Warehouse preflight**: `scripts/databricks_warehouse.py` maps dlt's `DESTINATION__DATABRICKS__CREDENTIALS__*` values to native Databricks CLI authentication variables and starts the configured SQL warehouse before e2e, pipeline, and Databricks dbt runs. For dbt `test-db`/`prod-db`, the profiles read the dlt-style `DESTINATION__DATABRICKS__CREDENTIALS__CLIENT_ID` and `DESTINATION__DATABRICKS__CREDENTIALS__CLIENT_SECRET` directly; `dev-db` uses the dlt access token. MotherDuck `*-md` targets read `MOTHERDUCK_TOKEN` and `DESTINATION__MOTHERDUCK__CREDENTIALS__DATABASE`.
 
 ## Agentic Coding (Docker AI Sandbox preferred; agent devcontainer alternative)
 The preferred environment for AI agent work (`opencode`, `claude`, `codex`) is Docker AI Sandbox configured by the repository-root `sbxenv.yaml`; the `.devcontainer/agent` is the second supported option. Both use a **dedicated GitHub machine user** scoped to this repo (collaborator, **Write** only, fine-grained PAT limited to this repo: `Contents: read/write`, `Pull requests: read/write`, `Metadata: read`). Never use a personal token. Full guide: `docs/source/agent_container.md`.

@@ -25,13 +25,17 @@ sources:
       loaded_at_query: |
         select max(loads.inserted_at)
         from {{ this }} as rows
-        join `{{ this.database }}`.`{{ this.schema }}`.`_dlt_loads` as loads
+        join {{ adapter.quote(this.database) }}.{{ adapter.quote(this.schema) }}.{{ adapter.quote('_dlt_loads') }} as loads
           on rows._dlt_load_id = loads.load_id
         where loads.status = 0
-      # On DuckDB (mock) targets each table is read directly from its test
-      # fixture CSV as an external location; on BigQuery targets the key is
-      # inert and {identifier} is ignored.
-      external_location: test_fixtures/hubspot/{identifier}.csv
+      # On the mock target each table is read directly from its test fixture
+      # CSV as an external location. Every other target (Databricks,
+      # MotherDuck, BigQuery) renders this to null, so dbt-duckdb reads the
+      # loaded tables instead of the fixture files.
+      # dbt 2.x's source YAML parser rejects bare Jinja block tags, so this
+      # uses an expression that renders to null off-mock; the manifest test
+      # guards that rendering.
+      external_location: "{{ 'test_fixtures/hubspot/{identifier}.csv' if target.name == 'mock' else none }}"
     tables:
       - name: companies
         identifier: hubspot__companies

@@ -1,0 +1,131 @@
+name: manual-load-transform
+
+on:
+  workflow_dispatch:
+    inputs:
+      target:
+        description: 'Target to load into and build against (Databricks or MotherDuck; BigQuery excluded)'
+        required: true
+        default: 'dev-md'
+        type: choice
+        options:
+          - dev-md
+          - test-md
+          - prod-md
+          - dev-db
+          - test-db
+          - prod-db
+      confirm_prod:
+        description: 'Required for prod-* targets: type the target name to confirm a production full refresh'
+        required: false
+        default: ''
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  load-transform:
+    # Configure required reviewers on the `production` environment in repo settings.
+    environment: ${{ startsWith(inputs.target, 'prod-') && 'production' || 'development' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      MISE_ENABLE_TOOLS: uv,python,databricks-cli
+      DBT_TARGET: ${{ inputs.target }}
+      RUNTIME__LOG_LEVEL: 'INFO'
+      PYTHONUNBUFFERED: '1'
+      DBT_ENGINE_NO_WARN_SEMANTIC_MANIFEST_VALIDATION: '1'
+      TZ: UTC
+    steps:
+      - name: checkout code
+        uses: actions/checkout@v5
+
+      - name: set up mise and project tools
+        uses: jdx/mise-action@v4
+
+      - name: install project dependencies
+        run: uv sync
+
+      - name: install dbt dependencies
+        run: mise run dbt-deps
+
+      - name: install 1Password CLI
+        uses: 1password/install-cli-action@v4
+        with:
+          version: latest
+
+      - name: set target schemas
+        run: uv run python scripts/target_schemas.py "$DBT_TARGET" >> "$GITHUB_ENV"
+
+      - name: validate target
+        run: uv run python scripts/validate_target.py
+
+      - name: guard production full refresh
+        if: startsWith(inputs.target, 'prod-')
+        env:
+          CONFIRM_PROD: ${{ inputs.confirm_prod }}
+          TARGET: ${{ inputs.target }}
+        run: |
+          if [ "$CONFIRM_PROD" != "$TARGET" ]; then
+            echo "Refusing production full refresh: set confirm_prod to '$TARGET'." >&2
+            exit 1
+          fi
+
+      - name: run notion pipeline (${{ inputs.target }})
+        env:
+          OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
+          OP_ENVIRONMENT_ID: ${{ vars.OP_ENVIRONMENT_ID }}
+        run: |
+          op run --environment "$OP_ENVIRONMENT_ID" -- \
+            env DBT_TARGET="$DBT_TARGET" DBT_SCHEMA="$DBT_SCHEMA" RAW_SCHEMA="$RAW_SCHEMA" \
+            mise run pipeline -- notion --full
+
+      - name: run hubspot pipeline (${{ inputs.target }})
+        env:
+          OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
+          OP_ENVIRONMENT_ID: ${{ vars.OP_ENVIRONMENT_ID }}
+        run: |
+          op run --environment "$OP_ENVIRONMENT_ID" -- \
+            env DBT_TARGET="$DBT_TARGET" DBT_SCHEMA="$DBT_SCHEMA" RAW_SCHEMA="$RAW_SCHEMA" \
+            mise run pipeline -- hubspot --full
+
+      - name: run google health pipeline (${{ inputs.target }})
+        env:
+          OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
+          OP_ENVIRONMENT_ID: ${{ vars.OP_ENVIRONMENT_ID }}
+        run: |
+          op run --environment "$OP_ENVIRONMENT_ID" -- \
+            env DBT_TARGET="$DBT_TARGET" DBT_SCHEMA="$DBT_SCHEMA" RAW_SCHEMA="$RAW_SCHEMA" \
+            mise run pipeline -- google_health --full
+
+      - name: run dbt source freshness (${{ inputs.target }})
+        env:
+          OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
+          OP_ENVIRONMENT_ID: ${{ vars.OP_ENVIRONMENT_ID }}
+        run: |
+          op run --environment "$OP_ENVIRONMENT_ID" -- \
+            env DBT_TARGET="$DBT_TARGET" DBT_SCHEMA="$DBT_SCHEMA" RAW_SCHEMA="$RAW_SCHEMA" \
+            mise run dbt-source-freshness
+
+      - name: build dbt models (${{ inputs.target }})
+        env:
+          OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
+          OP_ENVIRONMENT_ID: ${{ vars.OP_ENVIRONMENT_ID }}
+        run: |
+          op run --environment "$OP_ENVIRONMENT_ID" -- \
+            env DBT_TARGET="$DBT_TARGET" DBT_SCHEMA="$DBT_SCHEMA" RAW_SCHEMA="$RAW_SCHEMA" \
+            mise run dbt-build -- --full-refresh
+
+      # dlt state is uploaded for debugging only and is never restored: this
+      # workflow always does a full refresh, which does not need prior state.
+      # Incremental runs would need the state restored before the load.
+      - name: upload dlt state files
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: manual-load-transform-pipeline-state
+          path: |
+            ~/.dlt/**/state.json
+          if-no-files-found: ignore
+          retention-days: 7

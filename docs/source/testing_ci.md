@@ -23,16 +23,20 @@ class completes and resets local dlt state in a `finally` block.
 ```bash
 mise run dbt-build-mock
 mise run dbt-build
-DBT_TARGET=prod DBT_SCHEMA=reporting RAW_SCHEMA=raw mise run dbt-source-freshness
-DBT_TARGET=prod DBT_SCHEMA=reporting RAW_SCHEMA=raw mise run dbt-build
+DBT_TARGET=prod-db DBT_SCHEMA=reporting RAW_SCHEMA=raw mise run dbt-source-freshness
+DBT_TARGET=prod-db DBT_SCHEMA=reporting RAW_SCHEMA=raw mise run dbt-build
+DBT_TARGET=prod-md DBT_SCHEMA=reporting RAW_SCHEMA=raw mise run dbt-source-freshness-md
+DBT_TARGET=prod-md DBT_SCHEMA=reporting RAW_SCHEMA=raw mise run dbt-build-md
 mise run dbt -- run --target mock --select stg_google_health__sleep
 mise run dbt -- test --target mock --select stg_google_health__sleep
 ```
 
 The `mock` target uses DuckDB and CSV fixtures. `dbt-build` and
 `dbt-source-freshness` use `DBT_TARGET` plus the matching `DBT_SCHEMA` and
-`RAW_SCHEMA`, and perform a warehouse preflight. For development docs, run
-`mise run docs`.
+`RAW_SCHEMA`; the default target is `dev-md`, so local dbt builds use MotherDuck
+by default. Generic tasks start the Databricks warehouse only for `*-db`
+targets, and the `-md` variants skip the warehouse preflight entirely. For
+development docs, run `mise run docs`.
 
 Source freshness (`dbt source freshness`) checks each table against its
 configured SLA. Tables that are not expected to be fresh on the ingestion
@@ -72,7 +76,7 @@ as a repository variable. The 1Password Environment must export the dlt source
 and destination variables. CI installs the 1Password CLI `latest`.
 
 The Databricks CLI task starts a stopped SQL warehouse and polls for `RUNNING`
-and `HEALTHY` before e2e, pipeline, or Databricks dbt tasks proceed. A start
+and `HEALTHY` before e2e and `*-db` pipeline or dbt tasks proceed. A start
 rejected with a transient capacity error (`RESOURCE_EXHAUSTED`) is retried
 with backoff (up to 6 attempts), a warehouse in `STARTING` or `STOPPING` is
 waited out, and the whole start-and-wait is soft-bounded by a 15-minute
@@ -84,12 +88,24 @@ to a CLI timeout plus a poll interval).
 Workflows are in `.github/workflows/`:
 
 - `refresh-notion.yml`, `refresh-hubspot.yml`, `refresh-google-health.yml` —
-  scheduled ingestion via `mise run pipeline` with `DBT_TARGET=prod`,
-  `DBT_SCHEMA=reporting`, and `RAW_SCHEMA=raw` set on the run step.
-- `run-transforms.yml` — scheduled dbt source freshness and build via mise with
-  the same production target and schema variables set on the run step.
+  scheduled ingestion against MotherDuck (`DBT_TARGET=prod-md`) by default,
+  with `prod-db` selectable on manual dispatch; the target-aware
+  `mise run pipeline` task skips the warehouse preflight for MotherDuck.
+  `DBT_TARGET`, `DBT_SCHEMA`, and `RAW_SCHEMA` are written to `$GITHUB_ENV`
+  by `scripts/target_schemas.py`.
+- `run-transforms.yml` — scheduled dbt source freshness and build against
+  MotherDuck by default (Databricks selectable on dispatch) via the
+  target-aware `dbt-source-freshness` and `dbt-build` mise tasks.
+- `manual-load-transform.yml` — manually dispatch a full load of all three
+  sources plus a dbt build against a selected Databricks (`dev-db`, `test-db`,
+  `prod-db`) or MotherDuck (`dev-md`, `test-md`, `prod-md`) target;
+  `prod-*` runs require the matching `confirm_prod` input.
 - `test-pipelines.yml`, `test-transforms.yml`, `lint.yml` — CI tests and lint.
 - `docs.yml` — builds and deploys the Sphinx/dbt docs site.
+
+`test-transforms` builds the shared `dev-md` database (`personal.raw_dev`);
+the `test-transforms-dev-md` concurrency group serializes CI runs, but the job
+assumes `raw_dev` has been seeded by a prior load.
 
 Workflow source/API credentials are supplied by the configured 1Password
 Environment; mock/unit tests do not require cloud credentials.

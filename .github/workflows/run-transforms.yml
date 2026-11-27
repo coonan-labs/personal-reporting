@@ -4,10 +4,23 @@ on:
     - cron: '0 6 * * 1' # monday at 6 AM UTC
   workflow_dispatch:
     inputs:
+      target:
+        description: 'Warehouse target'
+        required: true
+        default: 'prod-md'
+        type: choice
+        options:
+          - prod-md
+          - prod-db
+      confirm_prod:
+        description: 'Required for a prod-* full refresh: type the target name to confirm'
+        required: false
+        default: ''
+        type: string
       force_full_refresh:
         description: 'Force full refresh'
         required: false
-        default: 'false'
+        default: false
         type: boolean
 
 permissions:
@@ -30,6 +43,9 @@ jobs:
       - name: install project dependencies
         run: mise run setup
 
+      - name: set target schemas
+        run: uv run python scripts/target_schemas.py "${{ inputs.target || 'prod-md' }}" >> "$GITHUB_ENV"
+
       - name: install 1Password CLI
         uses: 1password/install-cli-action@v4
         with:
@@ -38,16 +54,28 @@ jobs:
       - name: install dbt dependencies
         run: mise run dbt-deps
 
-      - name: run dbt source freshness and build
+      - name: check dbt source freshness
+        continue-on-error: true
         env:
           OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
           OP_ENVIRONMENT_ID: ${{ vars.OP_ENVIRONMENT_ID }}
-          DBT_TARGET: prod
-          DBT_SCHEMA: reporting
-          RAW_SCHEMA: raw
         run: |
           op run --environment "$OP_ENVIRONMENT_ID" -- env DBT_TARGET="$DBT_TARGET" DBT_SCHEMA="$DBT_SCHEMA" RAW_SCHEMA="$RAW_SCHEMA" mise run dbt-source-freshness
-          if [ "${{ inputs.force_full_refresh }}" = "true" ]; then
+
+      - name: run dbt build
+        env:
+          OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
+          OP_ENVIRONMENT_ID: ${{ vars.OP_ENVIRONMENT_ID }}
+          FORCE_FULL_REFRESH: ${{ inputs.force_full_refresh }}
+          CONFIRM_PROD: ${{ inputs.confirm_prod }}
+        run: |
+          if [ "$FORCE_FULL_REFRESH" = "true" ] && [ "$DBT_TARGET" != "${DBT_TARGET#prod-}" ]; then
+            if [ "$CONFIRM_PROD" != "$DBT_TARGET" ]; then
+              echo "Refusing production full refresh: set confirm_prod to '$DBT_TARGET'." >&2
+              exit 1
+            fi
+          fi
+          if [ "$FORCE_FULL_REFRESH" = "true" ]; then
             op run --environment "$OP_ENVIRONMENT_ID" -- env DBT_TARGET="$DBT_TARGET" DBT_SCHEMA="$DBT_SCHEMA" RAW_SCHEMA="$RAW_SCHEMA" mise run dbt-build -- --full-refresh
           else
             op run --environment "$OP_ENVIRONMENT_ID" -- env DBT_TARGET="$DBT_TARGET" DBT_SCHEMA="$DBT_SCHEMA" RAW_SCHEMA="$RAW_SCHEMA" mise run dbt-build

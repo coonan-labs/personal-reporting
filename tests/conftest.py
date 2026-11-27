@@ -8,7 +8,7 @@ import logging
 import os
 
 os.environ["TEST"] = "True"
-os.environ["DBT_TARGET"] = "test"
+os.environ["DBT_TARGET"] = "test-db"
 os.environ["DBT_SCHEMA"] = "reporting_test"
 os.environ["RAW_SCHEMA"] = "raw_test"
 os.environ.setdefault("RUNTIME__LOG_LEVEL", "INFO")
