@@ -51,6 +51,8 @@ def _parse_manifest(target: str, tmp_path: Path) -> dict:
     env["RAW_SCHEMA"] = "raw_dev"
     # Parse only renders the profile; a dummy token is enough (no connection).
     env["MOTHERDUCK_TOKEN"] = "test-token"
+    # dbt 2.x installs packages declared in packages.yml automatically before
+    # parse, so this test also runs in the dlt pipeline job without dbt-deps.
     target_path = tmp_path / f"target-{target}"
     log_path = tmp_path / f"logs-{target}"
     result = subprocess.run(

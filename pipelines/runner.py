@@ -95,13 +95,15 @@ def normalize_motherduck_database(value: str | None) -> str:
     """Return a bare MotherDuck database name.
 
     The environment value must be a bare database name (``personal``). A
-    leading ``md:`` prefix is stripped defensively: both dlt and dbt already
-    prefix it when connecting, so ``md:personal`` would become the invalid
-    ``md:md:personal``.
+    leading ``md://``, ``md:/``, or ``md:`` prefix is stripped defensively:
+    both dlt and dbt already prefix it when connecting, so ``md:personal``
+    would become the invalid ``md:md:personal``.
     """
     name = (value or "").strip()
     if name.startswith("md://"):
         name = name[5:]
+    elif name.startswith("md:/"):
+        name = name[4:]
     elif name.startswith("md:"):
         name = name[3:]
     return name or "personal"

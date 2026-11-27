@@ -12,6 +12,11 @@ on:
         options:
           - prod-md
           - prod-db
+      confirm_prod:
+        description: 'Required for a prod-* full refresh: type the target name to confirm'
+        required: false
+        default: ''
+        type: string
       force_full_refresh:
         description: 'Force full refresh'
         required: false
@@ -48,10 +53,18 @@ jobs:
           DBT_TARGET: ${{ inputs.target || 'prod-md' }}
           DBT_SCHEMA: reporting
           RAW_SCHEMA: raw
+          FORCE_FULL_REFRESH: ${{ inputs.force_full_refresh }}
+          CONFIRM_PROD: ${{ inputs.confirm_prod }}
           RUNTIME__LOG_LEVEL: 'INFO'
           PYTHONUNBUFFERED: '1'
         run: |
-          if [ "${{ inputs.force_full_refresh }}" = "true" ]; then
+          if [ "$FORCE_FULL_REFRESH" = "true" ] && [ "$DBT_TARGET" != "${DBT_TARGET#prod-}" ]; then
+            if [ "$CONFIRM_PROD" != "$DBT_TARGET" ]; then
+              echo "Refusing production full refresh: set confirm_prod to '$DBT_TARGET'." >&2
+              exit 1
+            fi
+          fi
+          if [ "$FORCE_FULL_REFRESH" = "true" ]; then
             op run --environment "$OP_ENVIRONMENT_ID" -- env DBT_TARGET="$DBT_TARGET" DBT_SCHEMA="$DBT_SCHEMA" RAW_SCHEMA="$RAW_SCHEMA" mise run pipeline -- notion --full
           else
             op run --environment "$OP_ENVIRONMENT_ID" -- env DBT_TARGET="$DBT_TARGET" DBT_SCHEMA="$DBT_SCHEMA" RAW_SCHEMA="$RAW_SCHEMA" mise run pipeline -- notion

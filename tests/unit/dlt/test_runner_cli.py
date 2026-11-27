@@ -292,6 +292,7 @@ def test_get_destination_motherduck_requires_token(monkeypatch):
         ("personal", "personal"),
         ("md:personal", "personal"),
         ("md://personal", "personal"),
+        ("md:/personal", "personal"),
         ("  personal  ", "personal"),
         (None, "personal"),
         ("", "personal"),
