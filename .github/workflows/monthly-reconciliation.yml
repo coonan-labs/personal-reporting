@@ -1,0 +1,147 @@
+name: monthly-reconciliation
+
+# Monthly delete reconciliation (issue #43, Phase 3).
+#
+# Notion and Google Health have no read-side delete feed, so deletions in
+# those sources are only picked up by a periodic full refresh
+# (truncate-and-load). HubSpot is NOT refreshed here: its deletes are
+# captured continuously by the archived sweep (Phase 1), so a monthly full
+# refresh would only re-page all archives.
+#
+# Runs on the first Sunday of each month at 02:00 UTC. GitHub Actions cron
+# cannot express "first Sunday" directly, so the schedule fires every
+# Sunday and the first-Sunday gate below skips the load on other Sundays.
+# Requires Phase 0 (`refresh="drop_data"`): a `--full` run against a
+# destination with stored incremental state would otherwise re-extract
+# only from the cursor.
+#
+# This file cannot be pushed by the GitHub App (no workflow permission);
+# upload it to .github/workflows/ manually or via a browser task.
+
+on:
+  schedule:
+    - cron: '0 2 * * 0' # every Sunday at 02:00 UTC; gated to the first Sunday
+  workflow_dispatch:
+    inputs:
+      target:
+        description: 'Warehouse target'
+        required: true
+        default: 'prod-md'
+        type: choice
+        options:
+          - prod-md
+          - prod-db
+
+permissions:
+  contents: read
+
+jobs:
+  reconcile:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      MISE_ENABLE_TOOLS: uv,python,databricks-cli
+      DBT_TARGET: ${{ inputs.target || 'prod-md' }}
+      RUNTIME__LOG_LEVEL: 'INFO'
+      PYTHONUNBUFFERED: '1'
+      DBT_ENGINE_NO_WARN_SEMANTIC_MANIFEST_VALIDATION: '1'
+      TZ: UTC
+    steps:
+      - name: checkout code
+        uses: actions/checkout@v5
+
+      - name: check first Sunday
+        id: first_sunday
+        run: |
+          # Scheduled runs only proceed on the first Sunday of the month
+          # (day-of-month 1-7 and Sunday). Manual dispatches always run.
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "run=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          day=$(date -u +%d)
+          dow=$(date -u +%u) # 7 = Sunday
+          if [ "$dow" = "7" ] && [ "$day" -le 7 ]; then
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "run=false" >> "$GITHUB_OUTPUT"
+            echo "Not the first Sunday (day $day, weekday $dow); skipping."
+          fi
+
+      - name: set up mise and project tools
+        if: steps.first_sunday.outputs.run == 'true'
+        uses: jdx/mise-action@v4
+
+      - name: install project dependencies
+        if: steps.first_sunday.outputs.run == 'true'
+        run: uv sync
+
+      - name: install dbt dependencies
+        if: steps.first_sunday.outputs.run == 'true'
+        run: mise run dbt-deps
+
+      - name: install 1Password CLI
+        if: steps.first_sunday.outputs.run == 'true'
+        uses: 1password/install-cli-action@v4
+        with:
+          version: latest
+
+      - name: set target schemas
+        if: steps.first_sunday.outputs.run == 'true'
+        run: uv run python scripts/target_schemas.py "$DBT_TARGET" >> "$GITHUB_ENV"
+
+      - name: validate target
+        if: steps.first_sunday.outputs.run == 'true'
+        run: uv run python scripts/validate_target.py
+
+      - name: run notion pipeline --full (${{ env.DBT_TARGET }})
+        if: steps.first_sunday.outputs.run == 'true'
+        env:
+          OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
+          OP_ENVIRONMENT_ID: ${{ vars.OP_ENVIRONMENT_ID }}
+        run: |
+          op run --environment "$OP_ENVIRONMENT_ID" -- \
+            env DBT_TARGET="$DBT_TARGET" DBT_SCHEMA="$DBT_SCHEMA" RAW_SCHEMA="$RAW_SCHEMA" \
+            mise run pipeline -- notion --full
+
+      - name: run google health pipeline --full (${{ env.DBT_TARGET }})
+        if: steps.first_sunday.outputs.run == 'true'
+        env:
+          OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
+          OP_ENVIRONMENT_ID: ${{ vars.OP_ENVIRONMENT_ID }}
+        run: |
+          op run --environment "$OP_ENVIRONMENT_ID" -- \
+            env DBT_TARGET="$DBT_TARGET" DBT_SCHEMA="$DBT_SCHEMA" RAW_SCHEMA="$RAW_SCHEMA" \
+            mise run pipeline -- google_health --full
+
+      - name: run dbt source freshness (${{ env.DBT_TARGET }})
+        if: steps.first_sunday.outputs.run == 'true'
+        env:
+          OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
+          OP_ENVIRONMENT_ID: ${{ vars.OP_ENVIRONMENT_ID }}
+        run: |
+          op run --environment "$OP_ENVIRONMENT_ID" -- \
+            env DBT_TARGET="$DBT_TARGET" DBT_SCHEMA="$DBT_SCHEMA" RAW_SCHEMA="$RAW_SCHEMA" \
+            mise run dbt-source-freshness
+
+      - name: build dbt models --full-refresh (${{ env.DBT_TARGET }})
+        if: steps.first_sunday.outputs.run == 'true'
+        env:
+          OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
+          OP_ENVIRONMENT_ID: ${{ vars.OP_ENVIRONMENT_ID }}
+        run: |
+          op run --environment "$OP_ENVIRONMENT_ID" -- \
+            env DBT_TARGET="$DBT_TARGET" DBT_SCHEMA="$DBT_SCHEMA" RAW_SCHEMA="$RAW_SCHEMA" \
+            mise run dbt-build -- --full-refresh
+
+      # dlt state is uploaded for debugging only and is never restored: this
+      # workflow always does a full refresh, which does not need prior state.
+      - name: upload dlt state files
+        if: always() && steps.first_sunday.outputs.run == 'true'
+        uses: actions/upload-artifact@v6
+        with:
+          name: monthly-reconciliation-pipeline-state
+          path: |
+            ~/.dlt/**/state.json
+          if-no-files-found: ignore
+          retention-days: 7
