@@ -120,7 +120,7 @@ def get_destination() -> Any:
     if is_motherduck_target():
         token = os.environ.get("MOTHERDUCK_TOKEN")
         if not token:
-            raise OSError(
+            raise RuntimeError(
                 "MOTHERDUCK_TOKEN is not set; it is required for MotherDuck "
                 "targets (DBT_TARGET ends in -md)"
             )

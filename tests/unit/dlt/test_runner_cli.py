@@ -282,7 +282,7 @@ def test_get_destination_motherduck_requires_token(monkeypatch):
     monkeypatch.setattr("pipelines.runner.DBT_TARGET", "dev-md")
     monkeypatch.delenv("MOTHERDUCK_TOKEN", raising=False)
 
-    with pytest.raises(OSError, match="MOTHERDUCK_TOKEN is not set"):
+    with pytest.raises(RuntimeError, match="MOTHERDUCK_TOKEN is not set"):
         get_destination()
 
 

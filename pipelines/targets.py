@@ -15,7 +15,7 @@ TARGET_SCHEMAS = {
     "mock": ("reporting_dev", "raw_dev"),
 }
 
-INGESTION_TARGETS = {"dev-db", "test-db", "prod-db", "dev-md", "test-md", "prod-md", "mock"}
+INGESTION_TARGETS = {"dev-db", "test-db", "prod-db", "dev-md", "test-md", "prod-md"}
 
 
 def get_target_schemas(target: str | None) -> tuple[str, str]:

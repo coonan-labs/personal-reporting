@@ -17,7 +17,7 @@ dbt Staging (views) → dbt Intermediate → dbt Marts (tables)
 **Rollback targets**: BigQuery (`dev-bq`, `test-bq`, `prod-bq` targets) — retained for easy rollback path
 **Local development**: DuckDB (`mock` target) with CSV test fixtures
 
-Default target is `dev-md` (MotherDuck). MotherDuck targets (`dev-md`/`test-md`/`prod-md`) use `DESTINATION__MOTHERDUCK__CREDENTIALS__DATABASE` (default `personal`; bare names are preferred and `md:`/`md://` prefixes are normalized) and `MOTHERDUCK_TOKEN`. Use `DBT_TARGET` to select the target and set the matching `DBT_SCHEMA` / `RAW_SCHEMA`; local defaults are `reporting_dev` / `raw_dev`.
+Default target is `dev-md` (MotherDuck). MotherDuck targets (`dev-md`/`test-md`/`prod-md`) use `DESTINATION__MOTHERDUCK__CREDENTIALS__DATABASE` (default `personal`; bare names are preferred and `md:`/`md://` prefixes are normalized) and `MOTHERDUCK_TOKEN`. Use `DBT_TARGET` to select the target and set the matching `DBT_SCHEMA` / `RAW_SCHEMA`; local defaults are `reporting_dev` / `raw_dev`. dlt pipeline names are shared across targets, so switching between `*-db` and `*-md` locally reuses the same `~/.dlt` state; use a full refresh or clear local state when switching destinations.
 
 ## GitHub Agentic Workflows (gh-aw)
 Scheduled AI-driven automation uses [gh-aw](https://github.com/github/gh-aw). Each workflow is a `.md` source file (frontmatter + agent prompt) compiled to a `.lock.yml` GitHub Actions file. Engine for this project: **Gemini** (`GEMINI_API_KEY` secret required).
@@ -159,7 +159,7 @@ Note: habit completions and thresholds come from the Notion habit reference data
 ## Tech Stack
 - **Data Ingestion**: dlt (Python)
 - **Data Transformation**: dbt 2.x (Rust engine, installed via the `dbt` PyPI distribution)
-- **Data Warehouse**: Databricks Unity Catalog (primary), Google BigQuery (rollback)
+- **Data Warehouse**: MotherDuck (primary), Databricks Unity Catalog (transition/rollback), Google BigQuery (rollback)
 - **Orchestration**: GitHub Actions
 - **Secret Management**: GCP Secret Manager or 1Password (configured via `SECRET_STORE` env var)
 - **Development**: Python 3.13, uv, VSCode Dev Containers

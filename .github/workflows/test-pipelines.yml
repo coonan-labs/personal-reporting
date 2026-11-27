@@ -7,6 +7,7 @@ on:
     paths:
       - 'pipelines/**'
       - 'tests/**'
+      - 'dbt/models/staging/**'
       - 'uv.lock'
       - 'pyproject.toml'
       - 'mise.toml'
@@ -30,9 +31,6 @@ jobs:
 
       - name: install project dependencies
         run: mise run setup
-
-      - name: install dbt dependencies
-        run: mise run dbt-deps
 
       - name: install 1Password CLI
         if: github.actor != 'dependabot[bot]'

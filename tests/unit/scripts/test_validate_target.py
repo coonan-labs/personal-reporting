@@ -124,5 +124,6 @@ def test_validate_ingestion_target_accepts_motherduck_target():
     validate_ingestion_target("prod-md", "reporting", "raw")
 
 
-def test_validate_ingestion_target_accepts_mock():
-    validate_ingestion_target("mock", "reporting_dev", "raw_dev")
+def test_validate_ingestion_target_rejects_mock():
+    with pytest.raises(ValueError, match="cannot be used for pipeline ingestion"):
+        validate_ingestion_target("mock", "reporting_dev", "raw_dev")

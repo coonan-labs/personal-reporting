@@ -21,7 +21,7 @@ jobs:
     env:
       DBT_PROJECT_DIR: dbt
       DBT_PROFILES_DIR: dbt
-      MISE_ENABLE_TOOLS: uv,python,databricks-cli
+      MISE_ENABLE_TOOLS: uv,python
       # Skip the semantic-manifest validation notice (no dbt_cloud.yml in this project)
       DBT_ENGINE_NO_WARN_SEMANTIC_MANIFEST_VALIDATION: '1'
     steps:
@@ -49,12 +49,12 @@ jobs:
         with:
           version: latest
 
-      - name: run Databricks integration build (explicit test-db)
+      - name: run MotherDuck integration build (dev-md)
         if: github.actor != 'dependabot[bot]'
         env:
           OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
           OP_ENVIRONMENT_ID: ${{ vars.OP_ENVIRONMENT_ID }}
-          DBT_TARGET: test-db
-          DBT_SCHEMA: reporting_test
-          RAW_SCHEMA: raw_test
+          DBT_TARGET: dev-md
+          DBT_SCHEMA: reporting_dev
+          RAW_SCHEMA: raw_dev
         run: op run --environment "$OP_ENVIRONMENT_ID" -- env DBT_TARGET="$DBT_TARGET" DBT_SCHEMA="$DBT_SCHEMA" RAW_SCHEMA="$RAW_SCHEMA" mise run dbt-build

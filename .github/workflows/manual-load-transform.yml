@@ -61,9 +61,12 @@ jobs:
 
       - name: guard production full refresh
         if: startsWith(inputs.target, 'prod-')
+        env:
+          CONFIRM_PROD: ${{ inputs.confirm_prod }}
+          TARGET: ${{ inputs.target }}
         run: |
-          if [ "${{ inputs.confirm_prod }}" != "${{ inputs.target }}" ]; then
-            echo "Refusing production full refresh: set confirm_prod to '${{ inputs.target }}'." >&2
+          if [ "$CONFIRM_PROD" != "$TARGET" ]; then
+            echo "Refusing production full refresh: set confirm_prod to '$TARGET'." >&2
             exit 1
           fi
 
@@ -94,6 +97,15 @@ jobs:
             env DBT_TARGET="$DBT_TARGET" DBT_SCHEMA="$DBT_SCHEMA" RAW_SCHEMA="$RAW_SCHEMA" \
             mise run pipeline -- google_health --full
 
+      - name: run dbt source freshness (${{ inputs.target }})
+        env:
+          OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
+          OP_ENVIRONMENT_ID: ${{ vars.OP_ENVIRONMENT_ID }}
+        run: |
+          op run --environment "$OP_ENVIRONMENT_ID" -- \
+            env DBT_TARGET="$DBT_TARGET" DBT_SCHEMA="$DBT_SCHEMA" RAW_SCHEMA="$RAW_SCHEMA" \
+            mise run dbt-source-freshness
+
       - name: build dbt models (${{ inputs.target }})
         env:
           OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
@@ -101,7 +113,7 @@ jobs:
         run: |
           op run --environment "$OP_ENVIRONMENT_ID" -- \
             env DBT_TARGET="$DBT_TARGET" DBT_SCHEMA="$DBT_SCHEMA" RAW_SCHEMA="$RAW_SCHEMA" \
-            mise run dbt-build
+            mise run dbt-build -- --full-refresh
 
       # dlt state is uploaded for debugging only and is never restored: this
       # workflow always does a full refresh, which does not need prior state.
