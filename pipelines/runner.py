@@ -121,10 +121,10 @@ def get_destination(target: str | None = None) -> Any:
     """
     target = DBT_TARGET if target is None else target
     if is_motherduck_target(target):
-        # MOTHERDUCK_TOKEN is the DuckDB-standard env var; dlt.secrets is a
-        # fallback for .dlt/secrets.toml and the other credential fields.
-        token = os.environ.get("MOTHERDUCK_TOKEN") or dlt.secrets.get(
-            "destination.motherduck.credentials.password"
+        # Resolve through dlt.secrets first so .dlt/secrets.toml works, then
+        # fall back to the DuckDB-standard MOTHERDUCK_TOKEN env var.
+        token = dlt.secrets.get("destination.motherduck.credentials.password") or os.environ.get(
+            "MOTHERDUCK_TOKEN"
         )
         if not token:
             raise RuntimeError(
