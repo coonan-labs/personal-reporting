@@ -181,10 +181,15 @@ def hubspot_source(
         if capture_deletes:
             # The Search API never returns archived objects, so a second
             # sweep lists them and emits deletion tombstones into the same
-            # raw table. The list endpoint has no archive-date filter, so
-            # this pages all archives on every run; for a personal CRM that
-            # is cheap. No `max_table_nesting` here on purpose: the resource
-            # must flatten `properties` exactly like the live resource.
+            # raw table. Use the Search endpoint (POST .../search) with
+            # `"archived": true` in the body — the GET list endpoint
+            # (GET /crm/v3/objects/{type}?archived=true) returns 400 for
+            # engagement objects (meetings, etc.). The filter is a broad
+            # GTE on the object's filter property from `initial_date`, so
+            # the sweep pages all archives on every run; for a personal
+            # CRM that is cheap. No `max_table_nesting` here on purpose:
+            # the resource must flatten `properties` exactly like the live
+            # resource.
             api_config["resources"].append(
                 {
                     "name": f"{resource_name}_archived",
@@ -195,16 +200,27 @@ def hubspot_source(
                     },
                     "processing_steps": [{"map": mark_archived}],
                     "endpoint": {
-                        "path": f"crm/v3/objects/{hs_object['name']}",
-                        "method": "GET",
-                        "params": {
-                            "archived": "true",
-                            "limit": 100,
-                            "properties": ",".join(hs_object["properties"]),
-                        },
+                        "path": f"crm/v3/objects/{hs_object['name']}/search",
+                        "method": "POST",
                         "data_selector": "results",
+                        "json": {
+                            "limit": 100,
+                            "properties": hs_object["properties"],
+                            "archived": True,
+                            "filterGroups": [
+                                {
+                                    "filters": [
+                                        {
+                                            "propertyName": hs_object["filter"],
+                                            "operator": "GTE",
+                                            "value": initial_date,
+                                        }
+                                    ]
+                                }
+                            ],
+                        },
                         "paginator": JSONResponseCursorPaginator(
-                            cursor_path="paging.next.after", cursor_param="after"
+                            cursor_path="paging.next.after", cursor_body_path="after"
                         ),
                     },
                 }

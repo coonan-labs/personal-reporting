@@ -23,13 +23,10 @@ objects:
       - hs_meeting_title
       - hs_meeting_body
       - hs_internal_meeting_notes
+      - hs_meeting_location_type
       - hs_meeting_outcome
-    # Note (issue #43): hs_meeting_location_type, hs_meeting_source and
-    # hs_engagement_source were removed from the meetings properties. They
-    # are not in HubSpot's documented meetings property list, and requesting
-    # them on the archived list endpoint (GET /crm/v3/objects/meetings)
-    # returns 400 Bad Request, aborting the pipeline. The Search endpoint
-    # tolerated them, but the list endpoint does not. dbt does not use them.
+      - hs_meeting_source
+      - hs_engagement_source
   - name: calls
     filter: hs_lastmodifieddate
     associations:

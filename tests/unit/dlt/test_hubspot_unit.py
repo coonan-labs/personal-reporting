@@ -58,6 +58,10 @@ def mock_hs_apis(monkeypatch: MonkeyPatch, mock_responses) -> Callable:
 
     def search_callback(request, object: str):
         payload = json.loads(request.body)
+        # The archived sweep posts to the same /search endpoint with
+        # `"archived": true` in the body; return the archived fixture.
+        if payload.get("archived"):
+            return sample_response(f"hubspot__{object}-archived.json")
         after = payload.get("after")
         filters = payload["filterGroups"][0]["filters"]
         start_filter = next(f for f in filters if f["operator"] == "GTE")
@@ -96,28 +100,15 @@ def mock_hs_apis(monkeypatch: MonkeyPatch, mock_responses) -> Callable:
                 status=200,
             )
 
-        # Mock CRM search endpoints
+        # Mock CRM search endpoints. The archived sweep posts to the same
+        # /search endpoint with `"archived": true` in the body, so the
+        # search callback serves both live and archived requests.
         for obj in CRM_OBJECTS:
             if not endpoints or obj in endpoints:
                 mock_responses.add_callback(
                     mock_responses.POST,
                     BASE_URL + f"/crm/v3/objects/{obj}/search",
                     callback=lambda r, o=obj: search_callback(r, o),
-                    content_type="application/json",
-                )
-
-        # Mock archived-sweep endpoints (GET /crm/v3/objects/{obj}?archived=true)
-        # used by the deletion-tombstone resources. Registered for the full
-        # source run, or when a test explicitly lists "{obj}_archived" in
-        # endpoints. Single-resource tests that only fetch the live resource
-        # must not register the archived mock, or `responses` fails teardown
-        # for the unused mock.
-        for obj in CRM_OBJECTS:
-            if not endpoints or f"{obj}_archived" in endpoints:
-                mock_responses.add_callback(
-                    mock_responses.GET,
-                    re.compile(BASE_URL + f"/crm/v3/objects/{obj}(\\?.*)?$"),
-                    callback=lambda r, o=obj: sample_response(f"hubspot__{o}-archived.json"),
                     content_type="application/json",
                 )
 
