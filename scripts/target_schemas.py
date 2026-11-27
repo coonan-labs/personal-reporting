@@ -15,9 +15,7 @@ from pathlib import Path
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(PROJECT_ROOT))
 
-from pipelines.targets import get_target_schemas  # noqa: E402
-
-ALLOWED_SUFFIXES = ("-md", "-db")
+from pipelines.targets import INGESTION_TARGETS, get_target_schemas  # noqa: E402
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -25,10 +23,10 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("target", help="Databricks (*-db) or MotherDuck (*-md) target")
     args = parser.parse_args(argv)
 
-    if not args.target.endswith(ALLOWED_SUFFIXES):
+    if args.target not in INGESTION_TARGETS:
         raise SystemExit(
-            f"Unsupported target {args.target!r}; choose a Databricks (*-db) "
-            "or MotherDuck (*-md) target"
+            f"Unsupported target {args.target!r}; choose one of "
+            f"{', '.join(sorted(INGESTION_TARGETS))}"
         )
 
     try:

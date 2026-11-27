@@ -17,6 +17,7 @@ DBT_TARGET = os.getenv("DBT_TARGET") or "dev-md"
 DBT_SCHEMA = os.getenv("DBT_SCHEMA") or "reporting_dev"
 RAW_SCHEMA = os.getenv("RAW_SCHEMA") or "raw_dev"
 
-# Set environment variables for schemas
+# Set environment variables for target and schemas
+os.environ["DBT_TARGET"] = DBT_TARGET
 os.environ["DBT_SCHEMA"] = DBT_SCHEMA
 os.environ["RAW_SCHEMA"] = RAW_SCHEMA

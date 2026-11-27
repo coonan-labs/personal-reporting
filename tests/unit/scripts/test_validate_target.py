@@ -79,6 +79,13 @@ def test_validate_target_cli_succeeds_for_matching_schemas():
     assert result.stderr == ""
 
 
+def test_validate_target_cli_uses_pipelines_default_target_when_unset():
+    result = run_cli(DBT_SCHEMA="reporting_dev", RAW_SCHEMA="raw_dev")
+
+    assert result.returncode == 0
+    assert result.stderr == ""
+
+
 def test_validate_target_cli_fails_for_mismatched_schemas():
     result = run_cli(
         DBT_TARGET="prod-db",

@@ -34,7 +34,7 @@ Current agentic workflow: `weekly-doc-updater` — runs every Monday, opens a PR
 - `pipelines/hubspot.py` — HubSpot CRM extraction (per-object: meetings, calls, etc.)
 - `pipelines/google_health.py` — Google Health sleep/steps/exercise extraction
 - `pipelines/hs_config.yml` — HubSpot object/property config
-- `pipelines/__init__.py` — Shared constants: BASE_DATE, RAW_SCHEMA, DBT_SCHEMA
+- `pipelines/__init__.py` — Shared constants: BASE_DATE, DBT_TARGET, DBT_SCHEMA, RAW_SCHEMA
 - `dbt/seeds/group_connect_cadence.csv` — Target connection cadence per group tier
 - `dbt/dbt_project.yml` — dbt config (profile, materializations, vars)
 - `dbt/profiles.yml` — dev-db/test-db/prod-db=Databricks, dev-bq/test-bq/prod-bq=BigQuery (rollback), dev-md/test-md/prod-md=MotherDuck, mock=DuckDB

@@ -102,5 +102,9 @@ Workflows are in `.github/workflows/`:
 - `test-pipelines.yml`, `test-transforms.yml`, `lint.yml` — CI tests and lint.
 - `docs.yml` — builds and deploys the Sphinx/dbt docs site.
 
+`test-transforms` builds the shared `dev-md` database (`personal.raw_dev`);
+the `test-transforms-dev-md` concurrency group serializes CI runs, but the job
+assumes `raw_dev` has been seeded by a prior load.
+
 Workflow source/API credentials are supplied by the configured 1Password
 Environment; mock/unit tests do not require cloud credentials.
