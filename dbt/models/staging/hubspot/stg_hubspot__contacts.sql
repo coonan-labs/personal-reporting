@@ -70,7 +70,7 @@ unique_contacts as (
     {{ dbt_utils.deduplicate(
         relation='contacts',
         partition_by='contact_id',
-        order_by='coalesce(deleted_at, updated_at) desc'
+        order_by='coalesce(deleted_at, updated_at) desc, coalesce(is_deleted, false) desc'
         )
     }}
 

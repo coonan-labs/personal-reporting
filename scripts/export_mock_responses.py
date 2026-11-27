@@ -186,7 +186,9 @@ def run_hubspot_export(session: requests.Session, dry_run: bool) -> None:
 
     logger.info("Executing HubSpot source to capture API responses...")
     pipeline = dlt.pipeline(pipeline_name="mock_export_hs", destination="duckdb")
-    source = hubspot_source(session=session)
+    # Fixtures capture live records only; archived tombstones are not fixture
+    # material and a personal CRM may have none (issue #43 review).
+    source = hubspot_source(session=session, capture_deletes=False)
     try:
         pipeline.extract(source)
     except Exception as e:

@@ -103,7 +103,7 @@ unique_engagements as (
     {{ dbt_utils.deduplicate(
         relation='all_engagements',
         partition_by='engagement_id',
-        order_by='coalesce(deleted_at, updated_at) desc'
+        order_by='coalesce(deleted_at, updated_at) desc, coalesce(is_deleted, false) desc'
         )
     }}
 

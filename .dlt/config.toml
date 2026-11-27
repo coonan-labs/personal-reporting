@@ -1,3 +1,9 @@
+[runtime]
+# Disable dlt's anonymous usage telemetry (telemetry.scalevector.ai).
+# dlt sends command names, hashed pipeline names and timings by default.
+# This is a personal pipeline; keep it off for every run in this repo.
+dlthub_telemetry = false
+
 [destination.databricks]
 # The staging volume for direct load is resolved at runtime from the pipeline's
 # target schema (<catalog>.<dataset>.staging, see get_databricks_staging_volume

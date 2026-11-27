@@ -86,7 +86,10 @@ def hubspot_source(
             `_deleted_at`) into the same raw table. The Search API never
             returns archived objects, so without this a deleted record stays
             visible forever. Defaults to True; disable in narrow live/e2e
-            windows so tests don't page all archives.
+            windows so tests don't page all archives. Note: a selective run
+            via `with_resources("hubspot__contacts")` does NOT auto-include
+            the `hubspot__contacts_archived` sibling, so deletes are not
+            captured unless the archived resource is selected explicitly.
 
     Yields:
         Generator[DltResource, None, None]: DLT resources configured for HubSpot

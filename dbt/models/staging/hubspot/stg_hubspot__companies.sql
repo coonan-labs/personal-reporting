@@ -73,7 +73,7 @@ unique_companies as (
     {{ dbt_utils.deduplicate(
         relation='companies',
         partition_by='company_id',
-        order_by='coalesce(deleted_at, updated_at) desc'
+        order_by='coalesce(deleted_at, updated_at) desc, coalesce(is_deleted, false) desc'
         )
     }}
 
