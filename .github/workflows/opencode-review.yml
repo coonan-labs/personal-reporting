@@ -13,6 +13,9 @@ jobs:
     if: contains(fromJSON('["OWNER", "MEMBER", "COLLABORATOR"]'), github.event.pull_request.author_association)
     runs-on: ubuntu-latest
     permissions:
+      # The opencode action fetches an OIDC token at startup; without
+      # this it fails before reviewing (issue #174).
+      id-token: write
       contents: read
       pull-requests: write
     steps:
