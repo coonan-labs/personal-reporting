@@ -6,13 +6,14 @@ on:
 
 jobs:
   review:
-    if: github.actor != 'dependabot[bot]'
+    # Only review PRs from the repository owner. The review passes
+    # OPENCODE_API_KEY to the agent, so fork PRs must not trigger it
+    # (issue #174). Agent tools are read-only (see the config below).
+    if: github.actor == 'michaelconan'
     runs-on: ubuntu-latest
     permissions:
-      id-token: write
       contents: read
       pull-requests: write
-      issues: write
     steps:
       - uses: actions/checkout@v6
         with:

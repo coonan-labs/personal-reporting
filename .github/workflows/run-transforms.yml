@@ -28,6 +28,11 @@ permissions:
 
 jobs:
   run-pipeline:
+    # Production environment (issue #174): configure required reviewers
+    # and deployment branch restrictions on the `production` environment
+    # in repo settings. This job always targets prod, so it always
+    # requires that environment.
+    environment: production
     runs-on: ubuntu-latest
     env:
       MISE_ENABLE_TOOLS: uv,python,databricks-cli

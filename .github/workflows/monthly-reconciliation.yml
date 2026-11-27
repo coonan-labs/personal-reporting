@@ -37,6 +37,11 @@ permissions:
 
 jobs:
   reconcile:
+    # Production environment (issue #174): configure required reviewers
+    # and deployment branch restrictions on the `production` environment
+    # in repo settings. This job always targets prod, so it always
+    # requires that environment.
+    environment: production
     runs-on: ubuntu-latest
     timeout-minutes: 60
     env:
