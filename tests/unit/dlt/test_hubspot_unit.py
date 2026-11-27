@@ -3,6 +3,7 @@ import json
 import os
 import re
 from collections.abc import Callable
+from datetime import UTC, datetime
 
 import dlt
 
@@ -102,6 +103,21 @@ def mock_hs_apis(monkeypatch: MonkeyPatch, mock_responses) -> Callable:
                     mock_responses.POST,
                     BASE_URL + f"/crm/v3/objects/{obj}/search",
                     callback=lambda r, o=obj: search_callback(r, o),
+                    content_type="application/json",
+                )
+
+        # Mock archived-sweep endpoints (GET /crm/v3/objects/{obj}?archived=true)
+        # used by the deletion-tombstone resources. Registered for the full
+        # source run, or when a test explicitly lists "{obj}_archived" in
+        # endpoints. Single-resource tests that only fetch the live resource
+        # must not register the archived mock, or `responses` fails teardown
+        # for the unused mock.
+        for obj in CRM_OBJECTS:
+            if not endpoints or f"{obj}_archived" in endpoints:
+                mock_responses.add_callback(
+                    mock_responses.GET,
+                    re.compile(BASE_URL + f"/crm/v3/objects/{obj}(\\?.*)?$"),
+                    callback=lambda r, o=obj: sample_response(f"hubspot__{o}-archived.json"),
                     content_type="application/json",
                 )
 
@@ -308,20 +324,67 @@ def test_hubspot_pipeline(mock_hs_apis, duckdb_pipeline):
         schema_table = client.execute_sql(f"SELECT 1 FROM {dataset}.hubspot__schemas")
         assert len(schema_table) == 1
 
-        # Check contacts table
+        # Check contacts table (5 live rows + 1 archived tombstone)
         contacts_table = client.execute_sql(
             f"SELECT 1 FROM {dataset}.hubspot__contacts",
         )
-        assert len(contacts_table) == 5
+        assert len(contacts_table) == 6
 
-        # Check companies table
+        # Check companies table (5 live rows + 1 archived tombstone)
         companies_table = client.execute_sql(
             f"SELECT 1 FROM {dataset}.hubspot__companies",
         )
-        assert len(companies_table) == 5
+        assert len(companies_table) == 6
 
-        # Check meetings table
+        # Check meetings table (5 live rows + 1 archived tombstone)
         meetings_table = client.execute_sql(
             f"SELECT 1 FROM {dataset}.hubspot__meetings",
         )
-        assert len(meetings_table) == 5
+        assert len(meetings_table) == 6
+
+
+def test_hubspot_archived_tombstone(mock_hs_apis, duckdb_pipeline):
+    """
+    Test that the archived-sweep resource loads a deletion tombstone for an
+    archived contact, and that the live resource's incremental cursor is
+    unchanged by the sweep.
+    """
+    # GIVEN
+    # Register the live contacts search endpoint and the archived endpoint.
+    mock_hs_apis(endpoints=["contacts", "contacts_archived"])
+    dataset = duckdb_pipeline.dataset_name
+
+    # WHEN
+    # Run the live contacts resource and its archived-sweep sibling.
+    source = hubspot_source().with_resources("hubspot__contacts", "hubspot__contacts_archived")
+    info = duckdb_pipeline.run(source)
+
+    # THEN
+    assert info.first_run is True
+    assert info.has_failed_jobs is False
+
+    # The tombstone row (id 82767429517, also present as a live row) is
+    # flagged deleted with the archived timestamp.
+    with duckdb_pipeline.sql_client() as client:
+        tombstones = client.execute_sql(
+            f"SELECT _deleted, _deleted_at FROM {dataset}.hubspot__contacts "
+            "WHERE id = 82767429517 AND _deleted = true"
+        )
+    assert len(tombstones) == 1
+    assert tombstones[0][0] is True
+    # dlt stores the ISO8601 "Z" timestamp as a timezone-aware UTC datetime.
+    assert tombstones[0][1] == datetime(2026, 8, 1, 10, 0, 0, tzinfo=UTC)
+
+    # The live incremental cursor is the max live updatedAt, unchanged by
+    # the archived sweep (whose rows carry updatedAt = archivedAt).
+    expected_cursor = max(
+        item["updatedAt"]
+        for page in ("run1_page1", "run1_page2")
+        for item in sample_data(f"hubspot__contacts-{page}.json")["results"]
+    )
+    assert (
+        pipeline_state(duckdb_pipeline)["sources"]["hubspot_source"]["resources"][
+            "hubspot__contacts"
+        ]["incremental"]["updatedAt"]["last_value"]
+        == expected_cursor
+    )

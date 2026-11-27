@@ -17,7 +17,13 @@ with meetings as (
         properties__hs_meeting_body as body_preview,
         cast(properties__hs_meeting_start_time as timestamp) as occurred_at,
         cast(created_at as timestamp) as created_at,
-        cast(updated_at as timestamp) as updated_at
+        cast(updated_at as timestamp) as updated_at,
+        -- Deletion tombstone from the HubSpot archived sweep (issue #43).
+        -- _deleted_at is cast to timestamp: on the mock target DuckDB infers
+        -- it as timestamptz or varchar depending on the fixture rows, and
+        -- the dedup coalesce needs a consistent timestamp type.
+        coalesce(_deleted, false) as is_deleted,
+        cast(_deleted_at as timestamp) as deleted_at
     from {{ source('hubspot', 'meetings') }}
 
 ),
@@ -30,7 +36,9 @@ calls as (
         properties__hs_call_body as body_preview,
         cast(properties__hs_timestamp as timestamp) as occurred_at,
         cast(created_at as timestamp) as created_at,
-        cast(updated_at as timestamp) as updated_at
+        cast(updated_at as timestamp) as updated_at,
+        coalesce(_deleted, false) as is_deleted,
+        cast(_deleted_at as timestamp) as deleted_at
     from {{ source('hubspot', 'calls') }}
 
 ),
@@ -43,7 +51,9 @@ communications as (
         properties__hs_communication_body as body_preview,
         cast(properties__hs_timestamp as timestamp) as occurred_at,
         cast(created_at as timestamp) as created_at,
-        cast(updated_at as timestamp) as updated_at
+        cast(updated_at as timestamp) as updated_at,
+        coalesce(_deleted, false) as is_deleted,
+        cast(_deleted_at as timestamp) as deleted_at
     from {{ source('hubspot', 'communications') }}
 
 ),
@@ -59,14 +69,26 @@ all_engagements as (
 ),
 
 unique_engagements as (
+-- Delete semantics (issue #43): order by coalesce(deleted_at, updated_at)
+-- so a deletion tombstone (deleted_at = archive time, later than the live
+-- updated_at) wins the dedup. Deleted engagements are then filtered out
+-- below, so they never reach facts; a later live update restores the row.
 
     {{ dbt_utils.deduplicate(
         relation='all_engagements',
         partition_by='engagement_id',
-        order_by='updated_at desc'
+        order_by='coalesce(deleted_at, updated_at) desc'
         )
     }}
 
 )
 
-select * from unique_engagements
+select
+    engagement_id,
+    engagement_type,
+    body_preview,
+    occurred_at,
+    created_at,
+    updated_at
+from unique_engagements
+where not coalesce(is_deleted, false)

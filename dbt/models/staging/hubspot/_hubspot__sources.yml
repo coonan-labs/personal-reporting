@@ -52,6 +52,16 @@ sources:
           - name: properties__hs_lastmodifieddate
             description: The date the company was last modified.
             data_type: timestamp
+          - name: _deleted
+            description: >
+              Deletion tombstone flag from the HubSpot archived sweep
+              (issue #43). True for archived companies, null/false for live.
+            data_type: boolean
+          - name: _deleted_at
+            description: >
+              Timestamp the company was archived in HubSpot, from the
+              archived sweep tombstone. Null for live companies (issue #43).
+            data_type: timestamp
       - name: contacts
         identifier: hubspot__contacts
         description: Raw contact data from the HubSpot CRM.
@@ -79,6 +89,16 @@ sources:
           - name: properties__lastmodifieddate
             description: The date the contact was last modified.
             data_type: timestamp
+          - name: _deleted
+            description: >
+              Deletion tombstone flag from the HubSpot archived sweep
+              (issue #43). True for archived contacts, null/false for live.
+            data_type: boolean
+          - name: _deleted_at
+            description: >
+              Timestamp the contact was archived in HubSpot, from the
+              archived sweep tombstone. Null for live contacts (issue #43).
+            data_type: timestamp
       - name: meetings
         identifier: hubspot__meetings
         description: Raw meeting engagement data from HubSpot CRM.
@@ -103,6 +123,16 @@ sources:
           - name: created_at
             data_type: timestamp
           - name: updated_at
+            data_type: timestamp
+          - name: _deleted
+            description: >
+              Deletion tombstone flag from the HubSpot archived sweep
+              (issue #43). True for archived meetings, null/false for live.
+            data_type: boolean
+          - name: _deleted_at
+            description: >
+              Timestamp the meeting was archived in HubSpot, from the
+              archived sweep tombstone. Null for live meetings (issue #43).
             data_type: timestamp
       - name: meetings_to_contacts
         identifier: hubspot__meetings_to_contacts
@@ -140,6 +170,16 @@ sources:
           - name: created_at
             data_type: timestamp
           - name: updated_at
+            data_type: timestamp
+          - name: _deleted
+            description: >
+              Deletion tombstone flag from the HubSpot archived sweep
+              (issue #43). True for archived calls, null/false for live.
+            data_type: boolean
+          - name: _deleted_at
+            description: >
+              Timestamp the call was archived in HubSpot, from the archived
+              sweep tombstone. Null for live calls (issue #43).
             data_type: timestamp
       - name: calls_to_contacts
         identifier: hubspot__calls_to_contacts
@@ -183,6 +223,18 @@ sources:
           - name: created_at
             data_type: timestamp
           - name: updated_at
+            data_type: timestamp
+          - name: _deleted
+            description: >
+              Deletion tombstone flag from the HubSpot archived sweep
+              (issue #43). True for archived communications, null/false
+              for live.
+            data_type: boolean
+          - name: _deleted_at
+            description: >
+              Timestamp the communication was archived in HubSpot, from the
+              archived sweep tombstone. Null for live communications
+              (issue #43).
             data_type: timestamp
       - name: communications_to_contacts
         identifier: hubspot__communications_to_contacts

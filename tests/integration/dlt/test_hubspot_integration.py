@@ -36,6 +36,9 @@ class TestHubSpotIntegration:
             **LIVE_REFRESH_ARGS,
             pipeline=duckdb_pipeline,
             source_modifier=live_source_modifier("hubspot"),
+            # The archived sweep pages every archived object regardless of
+            # the live window; skip it here so the narrow run stays bounded.
+            source_kwargs={"capture_deletes": False},
         )
 
         assert info.has_failed_jobs is False

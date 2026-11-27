@@ -150,6 +150,13 @@ models:
       - name: last_name
         description: Contact last name.
         data_type: string
+      - name: is_deleted
+        description: >
+          True when the contact was archived (deleted) in HubSpot. Deleted
+          contacts are kept in the dimension, flagged, so existing facts
+          still resolve to a person (issue #43).
+        data_type: boolean
+        data_tests: [not_null]
   - name: dim_group
     description: >
       Group and community master, one row per HubSpot company. SCD type 1,
@@ -182,6 +189,13 @@ models:
       - name: group_tier
         description: Group tier 1-3 parsed from the ideal customer profile field.
         data_type: bigint
+      - name: is_deleted
+        description: >
+          True when the company was archived (deleted) in HubSpot. Deleted
+          companies are kept in the dimension, flagged, so existing facts
+          still resolve to a group (issue #43).
+        data_type: boolean
+        data_tests: [not_null]
   - name: dim_group_tier
     description: >
       Group tier cadence reference, one row per tier with the target connection

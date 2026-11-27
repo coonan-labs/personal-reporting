@@ -1,0 +1,20 @@
+{
+  "total": 1,
+  "results": [
+    {
+      "id": "26705539096",
+      "properties": {
+        "createdate": "2024-12-07T14:08:20.845Z",
+        "hs_ideal_customer_profile": null,
+        "hs_lastmodifieddate": "2026-07-07T11:41:30.217Z",
+        "hs_object_id": "26705539096",
+        "name": "Jacob"
+      },
+      "createdAt": "2024-12-07T14:08:20.845Z",
+      "updatedAt": "2026-07-07T11:41:30.217Z",
+      "archived": true,
+      "url": "https://app.hubspot.com/contacts/48175120/record/0-2/26705539096",
+      "archivedAt": "2026-08-01T10:00:00.000Z"
+    }
+  ]
+}

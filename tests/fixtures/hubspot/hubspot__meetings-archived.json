@@ -1,0 +1,27 @@
+{
+  "total": 1,
+  "results": [
+    {
+      "id": "67394847537",
+      "properties": {
+        "hs_createdate": "2024-12-20T18:12:19.565Z",
+        "hs_engagement_source": "MOBILE_IOS",
+        "hs_internal_meeting_notes": null,
+        "hs_lastmodifieddate": "2024-12-26T14:46:09.727Z",
+        "hs_meeting_body": "Beat a over pass garden no stay commercial good prove.",
+        "hs_meeting_end_time": "2024-12-19T13:40:00Z",
+        "hs_meeting_location_type": null,
+        "hs_meeting_outcome": null,
+        "hs_meeting_source": "CRM_UI",
+        "hs_meeting_start_time": "2024-12-19T13:10:00Z",
+        "hs_meeting_title": null,
+        "hs_object_id": "67394847537"
+      },
+      "createdAt": "2024-12-20T18:12:19.565Z",
+      "updatedAt": "2024-12-26T14:46:09.727Z",
+      "archived": true,
+      "url": "",
+      "archivedAt": "2026-08-01T10:00:00.000Z"
+    }
+  ]
+}
