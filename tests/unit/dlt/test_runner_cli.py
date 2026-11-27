@@ -219,6 +219,7 @@ def test_runner_refresh_pipeline_uses_motherduck_destination_for_md_target(
     monkeypatch.setattr("pipelines.runner.RAW_SCHEMA", "raw_dev")
     monkeypatch.setenv("MOTHERDUCK_TOKEN", "test-token")
     monkeypatch.delenv("DESTINATION__MOTHERDUCK__CREDENTIALS__DATABASE", raising=False)
+    mock_dlt_secrets_get.side_effect = lambda _key: None
 
     mock_pipeline_instance = MagicMock()
     mock_dlt_pipeline.return_value = mock_pipeline_instance
@@ -252,7 +253,9 @@ def test_runner_refresh_pipeline_uses_motherduck_destination_for_md_target(
         "password": "test-token",
     }
     # The Databricks staging volume path must not run for MotherDuck targets.
-    mock_dlt_secrets_get.assert_not_called()
+    assert "destination.databricks.credentials.catalog" not in [
+        call.args[0] for call in mock_dlt_secrets_get.call_args_list
+    ]
 
 
 def test_get_destination_motherduck_normalizes_database_and_passes_token(

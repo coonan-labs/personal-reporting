@@ -120,10 +120,11 @@ def get_destination() -> Any:
     per-schema staging volume.
     """
     if is_motherduck_target():
-        # MotherDuck credentials are env-only by contract: the 1Password
-        # Environment exports MOTHERDUCK_TOKEN and
-        # DESTINATION__MOTHERDUCK__CREDENTIALS__DATABASE.
-        token = os.environ.get("MOTHERDUCK_TOKEN")
+        # MOTHERDUCK_TOKEN is the DuckDB-standard env var; dlt.secrets is a
+        # fallback for .dlt/secrets.toml and the other credential fields.
+        token = os.environ.get("MOTHERDUCK_TOKEN") or dlt.secrets.get(
+            "destination.motherduck.credentials.password"
+        )
         if not token:
             raise RuntimeError(
                 "MOTHERDUCK_TOKEN is not set; it is required for MotherDuck "
@@ -132,7 +133,7 @@ def get_destination() -> Any:
         return motherduck(
             credentials={
                 "database": normalize_motherduck_database(
-                    os.environ.get("DESTINATION__MOTHERDUCK__CREDENTIALS__DATABASE")
+                    dlt.secrets.get("destination.motherduck.credentials.database")
                 ),
                 "password": token,
             },
