@@ -8,12 +8,13 @@ on:
 
 jobs:
   opencode:
-    # Only the repository owner may trigger the agent. Comments, PR
+    # Only a repo/org owner, collaborator or member may trigger the
+    # agent. Comments, PR
     # descriptions and repo content can contain prompt-injection
     # instructions, so an untrusted commenter must not be able to run an
     # agent with credentials and write permissions (issue #174).
     if: |
-      github.actor == 'michaelconan' &&
+      contains(fromJSON('["OWNER", "MEMBER", "COLLABORATOR"]'), github.event.comment.author_association) &&
       (contains(github.event.comment.body, ' /oc') ||
       startsWith(github.event.comment.body, '/oc') ||
       contains(github.event.comment.body, ' /opencode') ||

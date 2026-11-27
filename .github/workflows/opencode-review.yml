@@ -6,10 +6,11 @@ on:
 
 jobs:
   review:
-    # Only review PRs from the repository owner. The review passes
-    # OPENCODE_API_KEY to the agent, so fork PRs must not trigger it
-    # (issue #174). Agent tools are read-only (see the config below).
-    if: github.actor == 'michaelconan'
+    # Review PRs from any repo/org owner, collaborator or member —
+    # just no externals. The review passes OPENCODE_API_KEY to the
+    # agent, so external PRs must not trigger it (issue #174).
+    # Agent tools are read-only (see the config below).
+    if: contains(fromJSON('["OWNER", "MEMBER", "COLLABORATOR"]'), github.event.pull_request.author_association)
     runs-on: ubuntu-latest
     permissions:
       contents: read

@@ -55,17 +55,17 @@ jobs:
         run: uv run pytest tests/unit/dbt/test_source_external_location.py -q
 
       - name: install 1Password CLI
-        if: github.actor == 'michaelconan'
+        if: contains(fromJSON('["OWNER", "MEMBER", "COLLABORATOR"]'), github.event.pull_request.author_association)
         uses: 1password/install-cli-action@1a3160d5e9de1ae0803eaa08a88746f5ae3daa50 # v4
         with:
           version: latest
 
       # Uses the shared dev-md database; the concurrency group serializes runs
       # because this job writes reporting_dev. Credentialed: runs only for
-      # PRs from the repository owner (issue #174); fork PRs get the mock
-      # builds above without credentials.
+      # PRs from a repo/org owner, collaborator or member (issue #174);
+      # external PRs get the mock builds above without credentials.
       - name: run MotherDuck integration build (dev-md)
-        if: github.actor == 'michaelconan'
+        if: contains(fromJSON('["OWNER", "MEMBER", "COLLABORATOR"]'), github.event.pull_request.author_association)
         env:
           OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
           OP_ENVIRONMENT_ID: ${{ vars.OP_ENVIRONMENT_ID }}
