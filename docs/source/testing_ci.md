@@ -91,7 +91,8 @@ Workflows are in `.github/workflows/`:
   scheduled ingestion against MotherDuck (`DBT_TARGET=prod-md`) by default,
   with `prod-db` selectable on manual dispatch; the target-aware
   `mise run pipeline` task skips the warehouse preflight for MotherDuck.
-  `DBT_SCHEMA=reporting` and `RAW_SCHEMA=raw` are set on the run step.
+  `DBT_TARGET`, `DBT_SCHEMA`, and `RAW_SCHEMA` are written to `$GITHUB_ENV`
+  by `scripts/target_schemas.py`.
 - `run-transforms.yml` — scheduled dbt source freshness and build against
   MotherDuck by default (Databricks selectable on dispatch) via the
   target-aware `dbt-source-freshness` and `dbt-build` mise tasks.

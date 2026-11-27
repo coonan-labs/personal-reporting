@@ -48,6 +48,9 @@ target and schemas agree before running. The generic `pipeline`, `dbt-build`,
 and `dbt-source-freshness` tasks start the Databricks SQL warehouse only for
 `*-db` targets; the `-md` tasks additionally require a MotherDuck target
 (``DBT_TARGET`` ending in ``-md``) and never start a warehouse.
+dlt pipeline names are shared across targets, so switching between `*-db`
+and `*-md` locally reuses the same `~/.dlt` state; use a full refresh or clear
+local dlt state when switching destinations.
 
 Credentialed tasks require `OP_SERVICE_ACCOUNT_TOKEN` and `OP_ENVIRONMENT_ID`.
 They run their commands using:

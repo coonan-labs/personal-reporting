@@ -97,8 +97,8 @@ waits for the warehouse first, then runs the tests inside the configured
 | Target | Adapter | Dataset/schema | Source/seeds behaviour (`dbt_project.yml`) |
 | ------ | ------- | -------------- | ------------------------------------------ |
 | `mock` | DuckDB (`dbt.duckdb`) | `reporting_dev` | sources resolve to fixture CSVs via `config.external_location`; no warehouse connection |
-| `dev-db` / `test-db` | Databricks Unity Catalog | catalog `workspace`, schemas `reporting_dev` / `reporting_test`; raw schemas `raw_dev` / `raw_test` | sources enabled; models read `RAW_SCHEMA` via `source()` |
-| `prod-db` | Databricks Unity Catalog | catalog `workspace`, schema `reporting`; raw schema `raw` | sources enabled; models read `RAW_SCHEMA` via `source()` |
+| `dev-db` / `test-db` | Databricks Unity Catalog | catalog from `DESTINATION__DATABRICKS__CREDENTIALS__CATALOG` (default `workspace`), schemas `reporting_dev` / `reporting_test`; raw schemas `raw_dev` / `raw_test` | sources enabled; models read `RAW_SCHEMA` via `source()` |
+| `prod-db` | Databricks Unity Catalog | catalog from `DESTINATION__DATABRICKS__CREDENTIALS__CATALOG` (default `workspace`), schema `reporting`; raw schema `raw` | sources enabled; models read `RAW_SCHEMA` via `source()` |
 | `dev-md` / `test-md` / `prod-md` | MotherDuck (DuckDB) | database from `DESTINATION__MOTHERDUCK__CREDENTIALS__DATABASE`, schemas `reporting_dev` / `reporting_test` / `reporting`; raw schemas `raw_dev` / `raw_test` / `raw` | sources enabled; models read `RAW_SCHEMA` via `source()`; default target is `dev-md` |
 | `dev-bq` / `test-bq` / `prod-bq` | BigQuery | schemas `reporting_dev` / `reporting_test` / `reporting`; raw schemas `raw_dev` / `raw_test` / `raw` | sources enabled; models read `RAW_SCHEMA` via `source()` |
 
