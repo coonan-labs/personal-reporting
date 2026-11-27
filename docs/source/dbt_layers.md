@@ -41,7 +41,7 @@ Models call `{{ source(source_name, relation_name) }}` directly; there is no `ma
   the MotherDuck database named by `DESTINATION__MOTHERDUCK__CREDENTIALS__DATABASE`.
 - In dev-bq/test-bq/prod-bq (BigQuery) sources resolve to the raw schema (rollback path).
 
-Consequence: fixture filenames under `dbt/test_fixtures/{source}/` must match the source identifiers in `_*sources.yml`.
+Consequence: fixture files live under `dbt/test_fixtures/{source}/` and must match the source identifiers in `_*sources.yml`; the `external_location` value itself is relative to the dbt project (`test_fixtures/{source}/{identifier}.csv`).
 
 ## Seeds
 

@@ -275,6 +275,16 @@ def test_get_destination_motherduck_normalizes_database_and_passes_token(
     }
 
 
+def test_get_destination_accepts_explicit_target(monkeypatch):
+    """An explicit target wins over the import-time module target."""
+    monkeypatch.setattr("pipelines.runner.DBT_TARGET", "dev-db")
+    monkeypatch.setenv("MOTHERDUCK_TOKEN", "test-token")
+
+    destination = get_destination("dev-md")
+
+    assert isinstance(destination, motherduck)
+
+
 def test_get_destination_motherduck_requires_token(monkeypatch):
     """A missing MOTHERDUCK_TOKEN fails fast instead of at connect time."""
     monkeypatch.setattr("pipelines.runner.DBT_TARGET", "dev-md")

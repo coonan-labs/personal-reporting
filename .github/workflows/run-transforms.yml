@@ -43,6 +43,9 @@ jobs:
       - name: install project dependencies
         run: mise run setup
 
+      - name: set target schemas
+        run: uv run python scripts/target_schemas.py "${{ inputs.target || 'prod-md' }}" >> "$GITHUB_ENV"
+
       - name: install 1Password CLI
         uses: 1password/install-cli-action@v4
         with:
@@ -51,13 +54,20 @@ jobs:
       - name: install dbt dependencies
         run: mise run dbt-deps
 
-      - name: run dbt source freshness and build
+      - name: check dbt source freshness
+        continue-on-error: true
         env:
           OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
           OP_ENVIRONMENT_ID: ${{ vars.OP_ENVIRONMENT_ID }}
           DBT_TARGET: ${{ inputs.target || 'prod-md' }}
-          DBT_SCHEMA: reporting
-          RAW_SCHEMA: raw
+        run: |
+          op run --environment "$OP_ENVIRONMENT_ID" -- env DBT_TARGET="$DBT_TARGET" DBT_SCHEMA="$DBT_SCHEMA" RAW_SCHEMA="$RAW_SCHEMA" mise run dbt-source-freshness
+
+      - name: run dbt build
+        env:
+          OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
+          OP_ENVIRONMENT_ID: ${{ vars.OP_ENVIRONMENT_ID }}
+          DBT_TARGET: ${{ inputs.target || 'prod-md' }}
           FORCE_FULL_REFRESH: ${{ inputs.force_full_refresh }}
           CONFIRM_PROD: ${{ inputs.confirm_prod }}
         run: |
@@ -67,7 +77,6 @@ jobs:
               exit 1
             fi
           fi
-          op run --environment "$OP_ENVIRONMENT_ID" -- env DBT_TARGET="$DBT_TARGET" DBT_SCHEMA="$DBT_SCHEMA" RAW_SCHEMA="$RAW_SCHEMA" mise run dbt-source-freshness
           if [ "$FORCE_FULL_REFRESH" = "true" ]; then
             op run --environment "$OP_ENVIRONMENT_ID" -- env DBT_TARGET="$DBT_TARGET" DBT_SCHEMA="$DBT_SCHEMA" RAW_SCHEMA="$RAW_SCHEMA" mise run dbt-build -- --full-refresh
           else

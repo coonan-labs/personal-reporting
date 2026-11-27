@@ -227,7 +227,7 @@ before removing an ephemeral environment and restore them later.
    or `opencode run "..."`. Credentialed tasks use
    `op run --environment "$OP_ENVIRONMENT_ID" -- ...`.
    Review via `git fetch sandbox-<name>` before push/PR.
-   Default to `DBT_TARGET=mock` inside sandboxes.
+   The repository default is `dev-md`; use `DBT_TARGET=mock` for offline sandbox work without MotherDuck access.
 
 Alternative: the restricted `.devcontainer/agent` "AI Agents" container
 (non-root, read-only root fs, no Docker socket) is also supported — see

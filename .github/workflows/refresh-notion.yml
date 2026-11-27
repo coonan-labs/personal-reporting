@@ -41,6 +41,9 @@ jobs:
       - name: install project dependencies
         run: mise run setup
 
+      - name: set target schemas
+        run: uv run python scripts/target_schemas.py "${{ inputs.target || 'prod-md' }}" >> "$GITHUB_ENV"
+
       - name: install 1Password CLI
         uses: 1password/install-cli-action@v4
         with:
@@ -51,8 +54,6 @@ jobs:
           OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
           OP_ENVIRONMENT_ID: ${{ vars.OP_ENVIRONMENT_ID }}
           DBT_TARGET: ${{ inputs.target || 'prod-md' }}
-          DBT_SCHEMA: reporting
-          RAW_SCHEMA: raw
           FORCE_FULL_REFRESH: ${{ inputs.force_full_refresh }}
           CONFIRM_PROD: ${{ inputs.confirm_prod }}
           RUNTIME__LOG_LEVEL: 'INFO'

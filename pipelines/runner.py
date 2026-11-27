@@ -109,17 +109,18 @@ def normalize_motherduck_database(value: str | None) -> str:
     return name or "personal"
 
 
-def get_destination() -> Any:
-    """Return the dlt destination for the current DBT_TARGET.
+def get_destination(target: str | None = None) -> Any:
+    """Return the dlt destination for ``target`` (default: ``DBT_TARGET``).
 
     MotherDuck targets (``*-md``) load into the MotherDuck database named by
-    ``DESTINATION__MOTHERDUCK__CREDENTIALS__DATABASE`` (default
-    ``personal``; a bare name, see :func:`normalize_motherduck_database`).
-    The token is passed explicitly from ``MOTHERDUCK_TOKEN`` and is required.
-    All other ingestion targets use the Databricks destination with a
-    per-schema staging volume.
+    ``destination.motherduck.credentials.database`` (default ``personal``; a
+    bare name, see :func:`normalize_motherduck_database`). The token comes
+    from ``MOTHERDUCK_TOKEN`` with a ``dlt.secrets`` password fallback and is
+    required. All other ingestion targets use the Databricks destination with
+    a per-schema staging volume.
     """
-    if is_motherduck_target():
+    target = DBT_TARGET if target is None else target
+    if is_motherduck_target(target):
         # MOTHERDUCK_TOKEN is the DuckDB-standard env var; dlt.secrets is a
         # fallback for .dlt/secrets.toml and the other credential fields.
         token = os.environ.get("MOTHERDUCK_TOKEN") or dlt.secrets.get(
@@ -203,7 +204,7 @@ def run_refresh(
         pipeline = dlt.pipeline(
             pipeline_name=pipeline_name,
             dataset_name=RAW_SCHEMA,
-            destination=get_destination(),
+            destination=get_destination(DBT_TARGET),
             progress=progress,
         )
 
