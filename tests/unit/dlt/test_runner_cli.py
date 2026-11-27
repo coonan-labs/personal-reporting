@@ -119,12 +119,9 @@ def test_runner_refresh_pipeline(mock_validate, mock_dlt_pipeline, mock_dlt_secr
     with patch.dict(
         PIPELINE_CONFIG,
         {
-            "notion": PIPELINE_CONFIG["notion"].__class__(
+            "notion": dataclasses.replace(
+                PIPELINE_CONFIG["notion"],
                 source_factory=MagicMock(return_value=mock_notion_source),
-                pipeline_name="notion_habits_pipeline",
-                display_name="Notion Habits",
-                required_secret_keys=["sources.notion.api_key"],
-                source_kwargs={"db_name": "Disciplines"},
             )
         },
     ):
@@ -192,11 +189,9 @@ def test_runner_supports_direct_token_skips_secret_validation(
     with patch.dict(
         PIPELINE_CONFIG,
         {
-            "google_health": PIPELINE_CONFIG["google_health"].__class__(
+            "google_health": dataclasses.replace(
+                PIPELINE_CONFIG["google_health"],
                 source_factory=fake_source,
-                pipeline_name="google_health_v4_pipeline",
-                display_name="Google Health v4",
-                required_secret_keys=["sources.google_health.client_id"],
                 token_getter=MagicMock(return_value="direct-token"),
                 supports_direct_token=True,
             )

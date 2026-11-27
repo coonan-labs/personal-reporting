@@ -174,7 +174,7 @@ Note: habit completions and thresholds come from the Notion habit reference data
 - All pipeline functions accept `is_incremental: Optional[bool] = None`; use `get_refresh_mode()` when `None`
 
 ### SQL (SQLFluff)
-- Dialect: BigQuery (rollback targets), DuckDB (dev), Databricks (primary)
+- Dialect: DuckDB/MotherDuck (primary), Databricks (transition), BigQuery (rollback)
 - Keywords: lowercase; identifiers: lowercase with underscores
 - Line length: 80; indentation: 4 spaces; trailing commas; explicit aliasing
 

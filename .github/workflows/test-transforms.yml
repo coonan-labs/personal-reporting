@@ -11,6 +11,7 @@ on:
       - 'scripts/databricks_warehouse.py'
       - 'scripts/validate_target.py'
       - 'pipelines/targets.py'
+      - 'tests/unit/dbt/test_source_external_location.py'
 
 permissions:
   contents: 'read'
@@ -46,6 +47,9 @@ jobs:
 
       - name: run local build with steps in gap detection (mock target)
         run: mise run dbt-build-mock-steps
+
+      - name: run dbt source manifest test
+        run: uv run pytest tests/unit/dbt/test_source_external_location.py -q
 
       - name: install 1Password CLI
         if: github.actor != 'dependabot[bot]'

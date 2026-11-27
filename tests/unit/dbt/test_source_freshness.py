@@ -169,14 +169,18 @@ def test_dlt_loads_referenced_with_adapter_quoting(name: str, rel: str) -> None:
 
 
 def _render_for_duckdb(query: str) -> str:
-    """Substitute dbt Jinja and render adapter.quote for DuckDB."""
+    """Substitute dbt Jinja and render adapter.quote for DuckDB.
+
+    The query keeps the real three-part database.schema.table relation so the
+    execution test covers the form used on MotherDuck.
+    """
     adapter_quoted = (
         "{{ adapter.quote(this.database) }}.{{ adapter.quote(this.schema) }}"
         ".{{ adapter.quote('_dlt_loads') }}"
     )
     assert adapter_quoted in query
-    query = query.replace(adapter_quoted, '"raw"."_dlt_loads"')
-    query = query.replace("{{ this }}", "raw_contacts")
+    query = query.replace(adapter_quoted, '"personal"."raw_dev"."_dlt_loads"')
+    query = query.replace("{{ this }}", '"personal"."raw_dev"."hubspot__contacts"')
     return query
 
 
@@ -185,21 +189,27 @@ def test_loaded_at_query_executes_against_duckdb() -> None:
 
     with tempfile.TemporaryDirectory() as tmp:
         con = duckdb.connect(str(Path(tmp) / "freshness.duckdb"))
-        con.execute("CREATE SCHEMA raw")
+        con.execute(f"ATTACH '{Path(tmp) / 'personal.duckdb'}' AS personal")
+        con.execute("CREATE SCHEMA personal.raw_dev")
         con.execute(
-            "CREATE OR REPLACE TABLE raw._dlt_loads "
+            "CREATE OR REPLACE TABLE personal.raw_dev._dlt_loads "
             "(load_id VARCHAR, status INTEGER, inserted_at TIMESTAMP)"
         )
-        con.execute("CREATE OR REPLACE TABLE raw_contacts (id INTEGER, _dlt_load_id VARCHAR)")
         con.execute(
-            "INSERT INTO raw._dlt_loads VALUES "
+            "CREATE OR REPLACE TABLE personal.raw_dev.hubspot__contacts "
+            "(id INTEGER, _dlt_load_id VARCHAR)"
+        )
+        con.execute(
+            "INSERT INTO personal.raw_dev._dlt_loads VALUES "
             "('ok', 0, TIMESTAMP '2026-10-18 02:00:00'), "
             "('failed', 1, TIMESTAMP '2026-10-19 02:00:00')"
         )
-        con.execute("INSERT INTO raw_contacts VALUES (1, 'ok'), (2, 'failed')")
+        con.execute(
+            "INSERT INTO personal.raw_dev.hubspot__contacts VALUES (1, 'ok'), (2, 'failed')"
+        )
 
         result = con.execute(query).fetchone()[0]
         assert result == datetime(2026, 10, 18, 2, 0, 0)
 
-        con.execute("UPDATE raw._dlt_loads SET status = 1 WHERE load_id = 'ok'")
+        con.execute("UPDATE personal.raw_dev._dlt_loads SET status = 1 WHERE load_id = 'ok'")
         assert con.execute(query).fetchone()[0] is None

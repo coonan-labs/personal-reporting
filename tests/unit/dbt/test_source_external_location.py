@@ -40,6 +40,8 @@ def _dbt_executable() -> str | None:
 
 
 def _parse_manifest(target: str, tmp_path: Path) -> dict:
+    if not (DBT_DIR / "dbt_packages").is_dir():
+        pytest.skip("dbt packages are not installed; run mise run dbt-deps")
     dbt = _dbt_executable()
     if dbt is None:
         pytest.skip("dbt is not installed")

@@ -80,8 +80,9 @@ mise run dbt-build-mock
 mise run dbt -- run --target mock --select stg_google_health__sleep
 ```
 
-To build against Databricks dev, run `mise run dbt-build`; this starts and
-waits for the SQL warehouse before dbt connects.
+`mise run dbt-build` builds against `DBT_TARGET` (default `dev-md`,
+MotherDuck). For `*-db` targets it starts and waits for the SQL warehouse
+before dbt connects; `-md` targets skip the warehouse preflight.
 
 - Generate docs:
 

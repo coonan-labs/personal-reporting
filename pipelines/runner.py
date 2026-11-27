@@ -120,6 +120,9 @@ def get_destination() -> Any:
     per-schema staging volume.
     """
     if is_motherduck_target():
+        # MotherDuck credentials are env-only by contract: the 1Password
+        # Environment exports MOTHERDUCK_TOKEN and
+        # DESTINATION__MOTHERDUCK__CREDENTIALS__DATABASE.
         token = os.environ.get("MOTHERDUCK_TOKEN")
         if not token:
             raise RuntimeError(

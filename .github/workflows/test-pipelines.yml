@@ -7,7 +7,6 @@ on:
     paths:
       - 'pipelines/**'
       - 'tests/**'
-      - 'dbt/models/staging/**'
       - 'uv.lock'
       - 'pyproject.toml'
       - 'mise.toml'

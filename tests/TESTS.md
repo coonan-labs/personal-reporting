@@ -137,8 +137,8 @@ Mock source coverage lives in `dbt/test_fixtures/{google_health,hubspot,notion}/
 
 ## CI mapping
 
-- `test-pipelines.yml` (on `pipelines/**`, `tests/**`, and `dbt/models/staging/**` changes): `mise run setup` → always `mise run test` (the dbt source manifest test auto-installs packages via dbt 2.x) → `mise run test-e2e` when the 1Password Environment is available → Codecov coverage + test results.
-- `test-transforms.yml` (on `dbt/**` changes): `mise run setup` + `mise run dbt-deps` → `mise run dbt-build-mock` → `mise run dbt-build` with `DBT_TARGET=dev-md` when 1Password credentials are available.
+- `test-pipelines.yml` (on `pipelines/**`, `tests/**` changes): `mise run setup` → always `mise run test` (the dbt source manifest test skips when `dbt_packages` is absent) → `mise run test-e2e` when the 1Password Environment is available → Codecov coverage + test results.
+- `test-transforms.yml` (on `dbt/**` and source-manifest test changes): `mise run setup` + `mise run dbt-deps` → `mise run dbt-build-mock` → `tests/unit/dbt/test_source_external_location.py` → `mise run dbt-build` with `DBT_TARGET=dev-md` when 1Password credentials are available. The job is serialized by the `test-transforms-dev-md` concurrency group because it writes the shared `reporting_dev` schema.
 - `lint.yml` (every PR): `prek` (Python/ruff), `dbt lint` (SQLFluff engine, reuses `dbt/.sqlfluff`, `DBT_TARGET=mock`), `dbt parse` + `dbt compile --write-catalog` (produces `catalog.json` for bouncer; `docs generate` no longer emits one under dbt 2.x), `dbt-bouncer` checks.
 
 Credentialed tasks run inside `op run --environment "$OP_ENVIRONMENT_ID" -- ...`.
