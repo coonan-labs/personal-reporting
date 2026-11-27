@@ -9,6 +9,17 @@
 -- Output: One row per unique engagement across all types
 -- ============================================================================
 
+-- The _deleted/_deleted_at tombstone columns only exist once the pipeline has
+-- run with the HubSpot archived sweep (issue #43). Older live tables lack
+-- them, so each branch falls back to not-deleted instead of failing on a
+-- missing column.
+{% set meetings_src = source('hubspot', 'meetings') %}
+{% set meetings_has_deleted = column_exists(meetings_src, '_deleted') %}
+{% set calls_src = source('hubspot', 'calls') %}
+{% set calls_has_deleted = column_exists(calls_src, '_deleted') %}
+{% set communications_src = source('hubspot', 'communications') %}
+{% set communications_has_deleted = column_exists(communications_src, '_deleted') %}
+
 with meetings as (
 
     select
@@ -22,9 +33,14 @@ with meetings as (
         -- _deleted_at is cast to timestamp: on the mock target DuckDB infers
         -- it as timestamptz or varchar depending on the fixture rows, and
         -- the dedup coalesce needs a consistent timestamp type.
+        {% if meetings_has_deleted %}
         coalesce(_deleted, false) as is_deleted,
         cast(_deleted_at as timestamp) as deleted_at
-    from {{ source('hubspot', 'meetings') }}
+        {% else %}
+        false as is_deleted,
+        cast(null as timestamp) as deleted_at
+        {% endif %}
+    from {{ meetings_src }}
 
 ),
 
@@ -37,9 +53,14 @@ calls as (
         cast(properties__hs_timestamp as timestamp) as occurred_at,
         cast(created_at as timestamp) as created_at,
         cast(updated_at as timestamp) as updated_at,
+        {% if calls_has_deleted %}
         coalesce(_deleted, false) as is_deleted,
         cast(_deleted_at as timestamp) as deleted_at
-    from {{ source('hubspot', 'calls') }}
+        {% else %}
+        false as is_deleted,
+        cast(null as timestamp) as deleted_at
+        {% endif %}
+    from {{ calls_src }}
 
 ),
 
@@ -52,9 +73,14 @@ communications as (
         cast(properties__hs_timestamp as timestamp) as occurred_at,
         cast(created_at as timestamp) as created_at,
         cast(updated_at as timestamp) as updated_at,
+        {% if communications_has_deleted %}
         coalesce(_deleted, false) as is_deleted,
         cast(_deleted_at as timestamp) as deleted_at
-    from {{ source('hubspot', 'communications') }}
+        {% else %}
+        false as is_deleted,
+        cast(null as timestamp) as deleted_at
+        {% endif %}
+    from {{ communications_src }}
 
 ),
 

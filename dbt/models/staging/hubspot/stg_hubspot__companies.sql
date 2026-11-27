@@ -13,6 +13,12 @@
 -- Output: One row per unique company with standardized fields
 -- ============================================================================
 
+-- The _deleted/_deleted_at tombstone columns only exist once the pipeline has
+-- run with the HubSpot archived sweep (issue #43). Older live tables lack
+-- them, so fall back to not-deleted instead of failing on a missing column.
+{% set companies_src = source('hubspot', 'companies') %}
+{% set has_deleted = column_exists(companies_src, '_deleted') %}
+
 with companies as (
     -- CTE: Companies Raw Extraction
     -- Purpose: Extract and transform raw HubSpot company data into clean, typed columns.
@@ -39,10 +45,17 @@ with companies as (
         -- _deleted_at is cast to timestamp: on the mock target DuckDB infers
         -- it as timestamptz or varchar depending on the fixture rows, and
         -- the dedup coalesce needs a consistent timestamp type.
+        -- When the source table predates the archived sweep it has neither
+        -- column, so default to not-deleted.
+        {% if has_deleted %}
         coalesce(_deleted, false) as is_deleted,
         cast(_deleted_at as timestamp) as deleted_at
+        {% else %}
+        false as is_deleted,
+        cast(null as timestamp) as deleted_at
+        {% endif %}
     from
-        {{ source('hubspot', 'companies') }}
+        {{ companies_src }}
 
 ),
 
