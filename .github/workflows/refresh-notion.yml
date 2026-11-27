@@ -70,6 +70,8 @@ jobs:
             op run --environment "$OP_ENVIRONMENT_ID" -- env DBT_TARGET="$DBT_TARGET" DBT_SCHEMA="$DBT_SCHEMA" RAW_SCHEMA="$RAW_SCHEMA" mise run pipeline -- notion
           fi
 
+      # dlt restores incremental state from the destination; this artifact
+      # is for debugging only and is not restored.
       - name: upload dlt state files
         if: always()
         uses: actions/upload-artifact@v6

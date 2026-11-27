@@ -57,6 +57,8 @@ jobs:
         with:
           version: latest
 
+      # Uses the shared dev-md database; the concurrency group serializes runs
+      # because this job writes reporting_dev.
       - name: run MotherDuck integration build (dev-md)
         if: github.actor != 'dependabot[bot]'
         env:
