@@ -28,14 +28,14 @@ def test_target_schemas_prints_motherduck_pair():
     result = run_cli("dev-md")
 
     assert result.returncode == 0
-    assert result.stdout == "DBT_SCHEMA=reporting_dev\nRAW_SCHEMA=raw_dev\n"
+    assert result.stdout == ("DBT_TARGET=dev-md\nDBT_SCHEMA=reporting_dev\nRAW_SCHEMA=raw_dev\n")
 
 
 def test_target_schemas_prints_databricks_pair():
     result = run_cli("prod-db")
 
     assert result.returncode == 0
-    assert result.stdout == "DBT_SCHEMA=reporting\nRAW_SCHEMA=raw\n"
+    assert result.stdout == "DBT_TARGET=prod-db\nDBT_SCHEMA=reporting\nRAW_SCHEMA=raw\n"
 
 
 def test_target_schemas_rejects_bigquery():

@@ -59,7 +59,6 @@ jobs:
         env:
           OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
           OP_ENVIRONMENT_ID: ${{ vars.OP_ENVIRONMENT_ID }}
-          DBT_TARGET: ${{ inputs.target || 'prod-md' }}
         run: |
           op run --environment "$OP_ENVIRONMENT_ID" -- env DBT_TARGET="$DBT_TARGET" DBT_SCHEMA="$DBT_SCHEMA" RAW_SCHEMA="$RAW_SCHEMA" mise run dbt-source-freshness
 
@@ -67,7 +66,6 @@ jobs:
         env:
           OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
           OP_ENVIRONMENT_ID: ${{ vars.OP_ENVIRONMENT_ID }}
-          DBT_TARGET: ${{ inputs.target || 'prod-md' }}
           FORCE_FULL_REFRESH: ${{ inputs.force_full_refresh }}
           CONFIRM_PROD: ${{ inputs.confirm_prod }}
         run: |

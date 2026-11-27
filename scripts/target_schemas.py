@@ -34,6 +34,7 @@ def main(argv: list[str] | None = None) -> int:
     except ValueError as exc:
         raise SystemExit(str(exc)) from exc
 
+    print(f"DBT_TARGET={args.target}")
     print(f"DBT_SCHEMA={dbt_schema}")
     print(f"RAW_SCHEMA={raw_schema}")
     return 0
