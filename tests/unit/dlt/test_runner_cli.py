@@ -173,6 +173,45 @@ def test_runner_refresh_pipeline(mock_validate, mock_dlt_pipeline, mock_dlt_secr
 @patch("pipelines.runner.dlt.secrets.get", return_value="workspace")
 @patch("pipelines.runner.dlt.pipeline")
 @patch("pipelines.runner.validate_required_secrets")
+def test_runner_full_refresh_resets_incremental_state(
+    mock_validate, mock_dlt_pipeline, mock_dlt_secrets_get
+):
+    """A non-incremental run resets the incremental cursor via refresh='drop_data'.
+
+    `write_disposition='replace'` alone leaves the stored cursor in place,
+    so the run would re-extract only from the cursor. `drop_data` wipes the
+    data and the resource state, so extraction restarts from `initial_value`.
+    """
+    mock_pipeline_instance = MagicMock()
+    mock_dlt_pipeline.return_value = mock_pipeline_instance
+    mock_pipeline_instance.run.return_value = "Loaded 10 rows"
+
+    mock_notion_source = MagicMock()
+    mock_notion_source.with_resources.return_value = mock_notion_source
+
+    with patch.dict(
+        PIPELINE_CONFIG,
+        {
+            "notion": dataclasses.replace(
+                PIPELINE_CONFIG["notion"],
+                source_factory=MagicMock(return_value=mock_notion_source),
+            )
+        },
+    ):
+        info = refresh_pipeline("notion", is_incremental=False)
+
+    assert info == "Loaded 10 rows"
+    mock_pipeline_instance.run.assert_called_once_with(
+        mock_notion_source,
+        write_disposition="replace",
+        refresh="drop_data",
+        loader_file_format="parquet",
+    )
+
+
+@patch("pipelines.runner.dlt.secrets.get", return_value="workspace")
+@patch("pipelines.runner.dlt.pipeline")
+@patch("pipelines.runner.validate_required_secrets")
 def test_runner_supports_direct_token_skips_secret_validation(
     mock_validate, mock_dlt_pipeline, mock_dlt_secrets_get
 ):

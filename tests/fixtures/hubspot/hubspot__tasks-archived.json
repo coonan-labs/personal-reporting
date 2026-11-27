@@ -1,0 +1,27 @@
+{
+  "total": 1,
+  "results": [
+    {
+      "id": "66758941266",
+      "properties": {
+        "hs_createdate": "2024-12-14T13:41:56.018Z",
+        "hs_engagement_source": null,
+        "hs_lastmodifieddate": "2024-12-15T17:37:20.973Z",
+        "hs_object_id": "66758941266",
+        "hs_start_date": null,
+        "hs_task_body": "Natural she guess feeling house population.",
+        "hs_task_completion_date": "2024-12-15T17:37:20.120Z",
+        "hs_task_family": "SALES",
+        "hs_task_for_object_type": "OWNER",
+        "hs_task_parent_task_id": null,
+        "hs_task_priority": "NONE",
+        "hs_task_status": "COMPLETED"
+      },
+      "createdAt": "2024-12-14T13:41:56.018Z",
+      "updatedAt": "2024-12-15T17:37:20.973Z",
+      "archived": true,
+      "url": "https://app.hubspot.com/tasks/48175120/view/all/task/66758941266",
+      "archivedAt": "2026-08-01T10:00:00.000Z"
+    }
+  ]
+}

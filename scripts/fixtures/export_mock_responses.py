@@ -71,6 +71,11 @@ SOURCE_REGISTRY: dict[str, dict[str, Any]] = {
         "source_kwargs": {
             "initial_date": "1970-01-01",
             "end_date": "2100-01-01",
+            # Fixtures capture live records only. The archived sweep
+            # (issue #43) emits deletion tombstones, not fixture material,
+            # and a personal CRM may have no archived records at all, so
+            # capturing it makes the export fail on empty payloads.
+            "capture_deletes": False,
         },
     },
     "notion": {

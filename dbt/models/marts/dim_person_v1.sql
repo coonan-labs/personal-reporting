@@ -18,7 +18,11 @@ stg_hubspot__contacts as (
         company_id,
         email,
         first_name,
-        last_name
+        last_name,
+        -- Deletion flag from the HubSpot archived sweep (issue #43).
+        -- Deleted contacts are kept in the dimension, flagged, so existing
+        -- facts still resolve to a person.
+        is_deleted
     from {{ ref('stg_hubspot__contacts') }}
 
 ),
@@ -32,7 +36,8 @@ sentinel as (
         cast(null as string) as contact_id,
         cast(null as string) as email,
         cast(null as string) as first_name,
-        cast(null as string) as last_name
+        cast(null as string) as last_name,
+        false as is_deleted
 
 ),
 
@@ -48,7 +53,8 @@ final as (
         contact_id,
         email,
         first_name,
-        last_name
+        last_name,
+        is_deleted
     from stg_hubspot__contacts
     union all
     select * from sentinel

@@ -21,3 +21,10 @@ RAW_SCHEMA = os.getenv("RAW_SCHEMA") or "raw_dev"
 os.environ["DBT_TARGET"] = DBT_TARGET
 os.environ["DBT_SCHEMA"] = DBT_SCHEMA
 os.environ["RAW_SCHEMA"] = RAW_SCHEMA
+
+# Disable dlt's anonymous usage telemetry. dlt sends command names, hashed
+# pipeline names and execution timings to https://telemetry.scalevector.ai
+# by default (runtime.dlthub_telemetry). This is a personal pipeline and the
+# telemetry is not needed, so turn it off for every run that imports this
+# package (CI, local runs, tests). Unit tests also set it in conftest.py.
+os.environ["RUNTIME__DLTHUB_TELEMETRY"] = "false"

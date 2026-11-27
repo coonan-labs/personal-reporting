@@ -44,11 +44,30 @@ def iso_to_unix(iso_date: str) -> int:
     return int(dt.timestamp() * 1000)
 
 
+def mark_archived(row: dict) -> dict:
+    """Mark an archived HubSpot object as a deletion tombstone.
+
+    The archived list endpoint returns the object as it was at archive time.
+    The tombstone carries `_deleted`/`_deleted_at` and re-times `updatedAt`
+    to the archive moment, so dbt's "latest wins" dedup picks it over the
+    last live version. A later restore/re-update produces a live row with a
+    newer `updatedAt`, which naturally un-deletes it.
+    """
+    archived_at = row.get("archivedAt") or row.get("updatedAt")
+    return {
+        **row,
+        "_deleted": True,
+        "_deleted_at": archived_at,
+        "updatedAt": archived_at,
+    }
+
+
 @dlt.source
 def hubspot_source(
     session: requests.Session | None = None,
     initial_date: str = "1970-01-01",
     end_date: str | None = None,
+    capture_deletes: bool = True,
 ) -> Generator[DltResource, None, None]:
     """Create a DLT source for HubSpot CRM data.
 
@@ -62,6 +81,15 @@ def hubspot_source(
             YYYY-MM-DD format. Defaults to `BASE_DATE`.
         end_date (str, optional): Optional end date for data extraction in
             YYYY-MM-DD format. Defaults to None.
+        capture_deletes (bool, optional): Emit an archived-sweep resource
+            per object that writes deletion tombstones (`_deleted`,
+            `_deleted_at`) into the same raw table. The Search API never
+            returns archived objects, so without this a deleted record stays
+            visible forever. Defaults to True; disable in narrow live/e2e
+            windows so tests don't page all archives. Note: a selective run
+            via `with_resources("hubspot__contacts")` does NOT auto-include
+            the `hubspot__contacts_archived` sibling, so deletes are not
+            captured unless the archived resource is selected explicitly.
 
     Yields:
         Generator[DltResource, None, None]: DLT resources configured for HubSpot
@@ -152,6 +180,54 @@ def hubspot_source(
             )
 
         api_config["resources"].append(object_resource)
+
+        if capture_deletes:
+            # The Search API never returns archived objects, so a second
+            # sweep lists them and emits deletion tombstones into the same
+            # raw table. Use the Search endpoint (POST .../search) with
+            # `"archived": true` in the body — the GET list endpoint
+            # (GET /crm/v3/objects/{type}?archived=true) returns 400 for
+            # engagement objects (meetings, etc.). The filter is a broad
+            # GTE on the object's filter property from `initial_date`, so
+            # the sweep pages all archives on every run; for a personal
+            # CRM that is cheap. No `max_table_nesting` here on purpose:
+            # the resource must flatten `properties` exactly like the live
+            # resource.
+            api_config["resources"].append(
+                {
+                    "name": f"{resource_name}_archived",
+                    "table_name": resource_name,
+                    "columns": {
+                        "_deleted": {"data_type": "bool"},
+                        "_deleted_at": {"data_type": "timestamp"},
+                    },
+                    "processing_steps": [{"map": mark_archived}],
+                    "endpoint": {
+                        "path": f"crm/v3/objects/{hs_object['name']}/search",
+                        "method": "POST",
+                        "data_selector": "results",
+                        "json": {
+                            "limit": 100,
+                            "properties": hs_object["properties"],
+                            "archived": True,
+                            "filterGroups": [
+                                {
+                                    "filters": [
+                                        {
+                                            "propertyName": hs_object["filter"],
+                                            "operator": "GTE",
+                                            "value": initial_date,
+                                        }
+                                    ]
+                                }
+                            ],
+                        },
+                        "paginator": JSONResponseCursorPaginator(
+                            cursor_path="paging.next.after", cursor_body_path="after"
+                        ),
+                    },
+                }
+            )
 
         for hs_association in hs_object.get("associations", []):
             resource_path = f"crm/v4/objects/{hs_object['name']}/{{resources.{resource_name}.id}}/associations/{hs_association}"

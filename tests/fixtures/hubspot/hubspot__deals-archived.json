@@ -1,0 +1,29 @@
+{
+  "total": 1,
+  "results": [
+    {
+      "id": "52224432742",
+      "properties": {
+        "amount": "2000",
+        "closed_lost_reason": null,
+        "closed_won_reason": null,
+        "closedate": "2026-06-26T22:43:38.438Z",
+        "createdate": "2025-12-21T05:05:29.871Z",
+        "deal_currency_code": null,
+        "dealname": "Start fall leader almost crime star break.",
+        "dealstage": "closedlost",
+        "dealtype": "existingbusiness",
+        "hs_deal_stage_probability": "0",
+        "hs_forecast_probability": null,
+        "hs_lastmodifieddate": "2026-07-03T05:10:44.543Z",
+        "hs_object_id": "52224432742",
+        "pipeline": "default"
+      },
+      "createdAt": "2025-12-21T05:05:29.871Z",
+      "updatedAt": "2026-07-03T05:10:44.543Z",
+      "archived": true,
+      "url": "https://app.hubspot.com/contacts/48175120/record/0-3/52224432742",
+      "archivedAt": "2026-08-01T10:00:00.000Z"
+    }
+  ]
+}

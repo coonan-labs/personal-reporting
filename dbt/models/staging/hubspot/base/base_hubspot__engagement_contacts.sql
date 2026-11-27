@@ -1,4 +1,10 @@
-with meetings_contacts as (
+with live_engagements as (
+
+    select engagement_id from {{ ref('base_hubspot__engagements') }}
+
+),
+
+meetings_contacts as (
 
     select
 
@@ -106,6 +112,21 @@ unique_engagement_contacts as (
         )
     }}
 
+),
+
+-- Delete semantics (issue #43): drop junction rows for deleted engagements.
+-- Associations are append-only, so a deleted engagement's contact rows would
+-- otherwise linger and break the relationships test on
+-- stg_hubspot__engagement_contacts.engagement_id (enabled on non-mock
+-- targets). base_hubspot__engagements already excludes deleted engagements,
+-- so inner-joining to it keeps only live ones.
+final as (
+
+    select unique_engagement_contacts.*
+    from unique_engagement_contacts
+    inner join live_engagements
+        on unique_engagement_contacts.engagement_id = live_engagements.engagement_id
+
 )
 
-select * from unique_engagement_contacts
+select * from final

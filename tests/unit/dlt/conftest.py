@@ -37,11 +37,15 @@ def resolve_mock_path(file_name: str) -> str:
     return str((MOCK_ROOT / path).resolve())
 
 
-# This environment variable is set to disable the Google Secrets provider for all dlt unit tests.
-# It needs to be set before any dlt modules are imported, which is why it's at the top of this file.
+# These environment variables are set before any dlt pipeline runs.
+# PROVIDERS__ENABLE_GOOGLE_SECRETS disables the Google Secrets provider for all dlt unit tests.
+# RUNTIME__DLTHUB_TELEMETRY disables dlt's anonymous usage telemetry
+# (default endpoint https://telemetry.scalevector.ai) so unit tests do not phone home.
+# The setting is dlt's `runtime.dlthub_telemetry` field, so it needs the RUNTIME__ section
+# prefix; the old DLT_TELEMETRY_DISABLED name is not a real dlt setting and had no effect.
 # Only applies to unit tests - E2E tests should not be affected
 os.environ["PROVIDERS__ENABLE_GOOGLE_SECRETS"] = "false"
-os.environ["DLT_TELEMETRY_DISABLED"] = "1"
+os.environ["RUNTIME__DLTHUB_TELEMETRY"] = "false"
 
 
 @pytest.fixture

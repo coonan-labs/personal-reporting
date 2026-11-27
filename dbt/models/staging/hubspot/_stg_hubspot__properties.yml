@@ -39,6 +39,17 @@ models:
               arguments:
                 min_value: timestamp '2020-01-01'
                 max_value: timestamp '2030-12-31'
+      - name: is_deleted
+        description: >
+          True when the company was archived (deleted) in HubSpot. Deleted
+          companies are kept, flagged, so dim_group retains them (issue #43).
+        data_type: boolean
+        data_tests: [not_null]
+      - name: deleted_at
+        description: >
+          Timestamp the company was archived in HubSpot, from the archived
+          sweep tombstone. Null for live companies (issue #43).
+        data_type: timestamp
   - name: stg_hubspot__contacts
     description: Contacts from HubSpot CRM with company mapping.
     columns:
@@ -85,8 +96,22 @@ models:
               arguments:
                 min_value: timestamp '2020-01-01'
                 max_value: timestamp '2030-12-31'
+      - name: is_deleted
+        description: >
+          True when the contact was archived (deleted) in HubSpot. Deleted
+          contacts are kept, flagged, so dim_person retains them (issue #43).
+        data_type: boolean
+        data_tests: [not_null]
+      - name: deleted_at
+        description: >
+          Timestamp the contact was archived in HubSpot, from the archived
+          sweep tombstone. Null for live contacts (issue #43).
+        data_type: timestamp
   - name: stg_hubspot__engagements
-    description: Engagements from HubSpot CRM with contact and company mapping.
+    description: >
+      Engagements from HubSpot CRM with contact and company mapping. Deleted
+      engagements are excluded upstream in base_hubspot__engagements, so this
+      model only ever holds live engagements (issue #43).
     columns:
       - name: engagement_id
         description: The primary key for this table

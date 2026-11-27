@@ -1,0 +1,27 @@
+{
+  "total": 1,
+  "results": [
+    {
+      "id": "66116493827",
+      "properties": {
+        "hs_call_body": "End hotel live already among almost wall.",
+        "hs_call_direction": "OUTBOUND",
+        "hs_call_disposition": "f240bbac-87c9-4f6e-bf70-924b57d47db7",
+        "hs_call_duration": null,
+        "hs_call_source": null,
+        "hs_call_status": "COMPLETED",
+        "hs_call_title": "Model media deep call goal there short fill.",
+        "hs_createdate": "2024-12-06T21:41:22.941Z",
+        "hs_engagement_source": "CRM_UI",
+        "hs_lastmodifieddate": "2024-12-06T21:41:29.788Z",
+        "hs_object_id": "66116493827",
+        "hs_timestamp": "2024-12-05T20:30:00Z"
+      },
+      "createdAt": "2024-12-06T21:41:22.941Z",
+      "updatedAt": "2024-12-06T21:41:29.788Z",
+      "archived": true,
+      "url": "https://app.hubspot.com/calls/48175120/review/66116493827",
+      "archivedAt": "2026-08-01T10:00:00.000Z"
+    }
+  ]
+}

@@ -211,6 +211,13 @@ def run_refresh(
     write_disposition = get_write_disposition(is_incremental)
 
     run_kwargs: dict = {"write_disposition": write_disposition}
+    if not is_incremental:
+        # A full refresh must reset the incremental cursor, not just replace
+        # the table: `replace` alone leaves the stored cursor in place, so
+        # the run would re-extract only from the cursor. `drop_data` wipes
+        # the data and the resource state, so extraction restarts from
+        # `initial_value`.
+        run_kwargs["refresh"] = "drop_data"
     if loader_file_format:
         run_kwargs["loader_file_format"] = loader_file_format
 
@@ -228,8 +235,11 @@ def refresh_pipeline(
     end_date: str | None = None,
     select: list[str] | None = None,
     source_modifier: Callable | None = None,
+    source_kwargs: dict | None = None,
 ):
     config = PIPELINE_CONFIG[pipeline_key]
+    merged_source_kwargs = dict(config.source_kwargs or {})
+    merged_source_kwargs.update(source_kwargs or {})
     return run_refresh(
         source_factory=config.source_factory,
         pipeline_name=config.pipeline_name,
@@ -244,6 +254,6 @@ def refresh_pipeline(
         progress=config.progress,
         token_getter=config.token_getter,
         supports_direct_token=config.supports_direct_token,
-        source_kwargs=config.source_kwargs,
+        source_kwargs=merged_source_kwargs,
         source_modifier=source_modifier,
     )

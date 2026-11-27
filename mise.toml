@@ -12,6 +12,10 @@ DBT_PROJECT_DIR = "{{ config_root }}/dbt"
 DBT_PROFILES_DIR = "{{ config_root }}/dbt"
 PYTHONUNBUFFERED = "1"
 RUNTIME__LOG_LEVEL = "INFO"
+# Disable dlt's anonymous usage telemetry (telemetry.scalevector.ai) for
+# every mise task. Also set in pipelines/__init__.py, tests conftest.py and
+# .dlt/config.toml so non-mise runs are covered too.
+RUNTIME__DLTHUB_TELEMETRY = "false"
 # Pin the session timezone to UTC for every mise invocation: dbt 2.x does
 # not apply session-scoped settings (e.g. TimeZone) from profiles.yml, so
 # DuckDB would otherwise use the machine timezone and timestamp casts

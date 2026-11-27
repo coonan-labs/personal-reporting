@@ -1,0 +1,22 @@
+{
+  "total": 1,
+  "results": [
+    {
+      "id": "82767429517",
+      "properties": {
+        "associatedcompanyid": "26704393617",
+        "createdate": "2024-12-06T22:19:05.844Z",
+        "email": "jeannewhite@example.net",
+        "firstname": "Rachael",
+        "hs_object_id": "82767429517",
+        "lastmodifieddate": "2025-12-28T11:15:47.055Z",
+        "lastname": "Higgins"
+      },
+      "createdAt": "2024-12-06T22:19:05.844Z",
+      "updatedAt": "2025-12-28T11:15:47.055Z",
+      "archived": true,
+      "url": "https://app.hubspot.com/contacts/48175120/record/0-1/82767429517",
+      "archivedAt": "2026-08-01T10:00:00.000Z"
+    }
+  ]
+}
