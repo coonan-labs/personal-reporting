@@ -9,16 +9,19 @@ on:
 jobs:
   opencode:
     # Only a repo/org owner, collaborator or member may trigger the
-    # agent. Comments, PR
-    # descriptions and repo content can contain prompt-injection
-    # instructions, so an untrusted commenter must not be able to run an
-    # agent with credentials and write permissions (issue #174).
+    # agent. Comments, PR descriptions and repo content can contain
+    # prompt-injection instructions, so an untrusted commenter must not
+    # be able to run an agent with credentials and write permissions
+    # (issue #174). For review comments, the PR must also not be a fork:
+    # a trusted member commenting /oc on an external PR would otherwise
+    # run the agent with that PR's content in its prompt.
     if: |
       contains(fromJSON('["OWNER", "MEMBER", "COLLABORATOR"]'), github.event.comment.author_association) &&
       (contains(github.event.comment.body, ' /oc') ||
       startsWith(github.event.comment.body, '/oc') ||
       contains(github.event.comment.body, ' /opencode') ||
-      startsWith(github.event.comment.body, '/opencode'))
+      startsWith(github.event.comment.body, '/opencode')) &&
+      (github.event_name != 'pull_request_review_comment' || github.event.pull_request.head.repo.fork == false)
     runs-on: ubuntu-latest
     permissions:
       id-token: write

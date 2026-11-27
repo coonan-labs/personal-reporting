@@ -6,7 +6,10 @@ on:
 
 jobs:
   triage:
-    if: github.actor != 'dependabot[bot]'
+    # Only issues from a repo/org owner, collaborator or member are
+    # triaged — the agent gets OPENCODE_API_KEY, so external issue text
+    # must not trigger it (issue #174).
+    if: contains(fromJSON('["OWNER", "MEMBER", "COLLABORATOR"]'), github.event.issue.author_association)
     runs-on: ubuntu-latest
     permissions:
       id-token: write

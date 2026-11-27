@@ -9,8 +9,15 @@ jobs:
     # Review PRs from any repo/org owner, collaborator or member —
     # just no externals. The review passes OPENCODE_API_KEY to the
     # agent, so external PRs must not trigger it (issue #174).
-    # Agent tools are read-only (see the config below).
-    if: contains(fromJSON('["OWNER", "MEMBER", "COLLABORATOR"]'), github.event.pull_request.author_association)
+    # Agent tools are read-only (see the config below). Draft PRs are
+    # skipped; marking one ready triggers a review via ready_for_review.
+    # Concurrency cancels a stale review when a new push arrives.
+    if: |
+      contains(fromJSON('["OWNER", "MEMBER", "COLLABORATOR"]'), github.event.pull_request.author_association) &&
+      github.event.pull_request.draft == false
+    concurrency:
+      group: opencode-review-${{ github.event.pull_request.number }}
+      cancel-in-progress: true
     runs-on: ubuntu-latest
     permissions:
       # The opencode action fetches an OIDC token at startup; without
