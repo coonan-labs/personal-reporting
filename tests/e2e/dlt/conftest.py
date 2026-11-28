@@ -31,12 +31,16 @@ from tests.e2e.dlt.cleanup import cleanup_e2e_pipeline  # noqa: E402
 
 logger = logging.getLogger(__name__)
 
-# Ensure Google Secrets are enabled for E2E tests
-# This counteracts any unit test configuration that might disable them
-os.environ["PROVIDERS__ENABLE_GOOGLE_SECRETS"] = "true"
-os.environ["PROVIDERS__GOOGLE_SECRETS__ONLY_SECRETS"] = "true"
-os.environ["PROVIDERS__GOOGLE_SECRETS__LIST_SECRETS"] = "true"
-os.environ["PROVIDERS__GOOGLE_SECRETS__ONLY_TOML_FRAGMENTS"] = "false"
+# Only enable Google Secrets when the project uses that secret store. Enabling
+# it unconditionally forces a GCP credential lookup even when 1Password (the
+# default) supplies the credentials.
+if SECRET_STORE == "google":
+    os.environ["PROVIDERS__ENABLE_GOOGLE_SECRETS"] = "true"
+    os.environ["PROVIDERS__GOOGLE_SECRETS__ONLY_SECRETS"] = "true"
+    os.environ["PROVIDERS__GOOGLE_SECRETS__LIST_SECRETS"] = "true"
+    os.environ["PROVIDERS__GOOGLE_SECRETS__ONLY_TOML_FRAGMENTS"] = "false"
+else:
+    os.environ["PROVIDERS__ENABLE_GOOGLE_SECRETS"] = "false"
 os.environ["DLT_TELEMETRY_DISABLED"] = "1"
 
 

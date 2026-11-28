@@ -86,8 +86,9 @@ reused by the e2e suite to keep runtimes low:
 Cloud tests against real APIs + MotherDuck by default, with Databricks as a
 fallback (`E2E_TARGET=test-db`). `mise run test-e2e` starts and waits for the
 warehouse only for the Databricks fallback, then runs the tests inside the
-configured 1Password Environment. `conftest.py` re-enables Google Secrets
-(`PROVIDERS__ENABLE_GOOGLE_SECRETS=true`, TOML fragments off, list-secrets on):
+configured 1Password Environment. When `SECRET_STORE=google`, `conftest.py`
+also enables Google Secrets (TOML fragments off, list-secrets on); the default
+1Password configuration leaves the provider disabled:
 
 - `check_config` (module autouse): asserts `GOOGLE_APPLICATION_CREDENTIALS` exists and the `GoogleSecretsProvider` is configured when `SECRET_STORE=google`.
 - `e2e_pipeline` (class-scoped): `dlt.pipeline(pipeline_name="live_e2e_test", destination=get_destination(E2E_TARGET), dataset_name="live_data", dev_mode=True)`; `cleanup_e2e_pipeline()` drops the qualified, dev-mode schema with `DROP SCHEMA IF EXISTS ... CASCADE`, then resets local dlt state even if remote deletion fails.
