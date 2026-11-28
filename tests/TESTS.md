@@ -8,7 +8,7 @@ This repo has two test systems: **pytest** for `pipelines/` (dlt) and **dbt buil
 | Fixture-tooling unit | `tests/unit/scripts/` | none (pure functions, `tmp_path`, stubbed BQ client) | none | runs under `mise run test` | `test-pipelines.yml` via `test` |
 | dlt integration (live, opt-in) | `tests/integration/dlt/` | DuckDB / live APIs | `live` | `RUN_LIVE_API_TESTS=1 pytest tests/integration -m live` | not run in CI |
 | Fixture-tooling live | `tests/integration/scripts/` | DuckDB / live APIs | `live` | `RUN_LIVE_API_TESTS=1 pytest tests/integration -m live` | not run in CI |
-| dlt e2e (cloud) | `tests/e2e/dlt/` | Databricks (`live_e2e_test` / `live_data`, `dev_mode=True`) | `e2e` | `mise run test-e2e` (`pytest tests/e2e`) | `test-pipelines.yml` (only with 1Password Environment credentials, skipped for dependabot) |
+| dlt e2e (cloud) | `tests/e2e/dlt/` | Databricks (`live_e2e_test` / `live_data`, `dev_mode=True`) | `e2e` | `mise run test-e2e` (`pytest tests/e2e`) | `test-pipelines.yml` (only with 1Password Environment credentials; runs only for non-fork PRs from a repo/org owner, collaborator or member) |
 | dbt transform tests | `dbt/models/**/_*.yml`, `dbt/tests/` | DuckDB (`mock` target) in CI, Databricks otherwise | n/a (`dbt test` / `dbt build`) | `mise run dbt-build-mock`, `mise run dbt-build` | `test-transforms.yml`, `lint.yml` |
 
 > **Note:** the Fitbit dlt pipeline was removed (Fitbit API deprecation), and the
