@@ -12,6 +12,9 @@ on:
       - 'scripts/validate_target.py'
       - 'pipelines/targets.py'
       - 'tests/unit/dbt/test_source_external_location.py'
+      # The workflow itself: gating changes must be exercised by the job
+      # they gate, or they ship unvalidated (issue #174).
+      - '.github/workflows/test-transforms.yml'
 
 permissions:
   contents: 'read'
@@ -22,7 +25,12 @@ concurrency:
 
 jobs:
   test_dbt:
+    # Dev credentials come from the `development` environment's secrets;
+    # prod credentials are never available to this job (issue #174).
+    environment: development
     runs-on: ubuntu-latest
+    # A hung dbt build must not burn the default 6h runner limit.
+    timeout-minutes: 30
     env:
       DBT_PROJECT_DIR: dbt
       DBT_PROFILES_DIR: dbt
@@ -31,10 +39,12 @@ jobs:
       DBT_ENGINE_NO_WARN_SEMANTIC_MANIFEST_VALIDATION: '1'
     steps:
       - name: check out code
-        uses: actions/checkout@v5
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
 
       - name: set up mise and project tools
-        uses: jdx/mise-action@v4
+        uses: jdx/mise-action@c2a87611a18de5b3828c5652fe268e992400cb5c # v4
 
       - name: install dependencies
         run: mise run setup
@@ -52,15 +62,23 @@ jobs:
         run: uv run pytest tests/unit/dbt/test_source_external_location.py -q
 
       - name: install 1Password CLI
-        if: github.actor != 'dependabot[bot]'
-        uses: 1password/install-cli-action@v4
+        if: |
+          contains(fromJSON('["OWNER", "MEMBER", "COLLABORATOR"]'), github.event.pull_request.author_association) &&
+          github.event.pull_request.head.repo.fork == false
+        uses: 1password/install-cli-action@1a3160d5e9de1ae0803eaa08a88746f5ae3daa50 # v4
         with:
           version: latest
 
-      # Uses the shared dev-md database; the concurrency group serializes runs
-      # because this job writes reporting_dev.
+      # Uses the dev-md database (personal_dev) from the development
+      # environment; the concurrency group serializes runs
+      # because this job writes reporting_dev. Credentialed: runs only for
+      # non-fork PRs from a repo/org owner, collaborator or member
+      # (issue #174); external PRs get the mock builds above without
+      # credentials.
       - name: run MotherDuck integration build (dev-md)
-        if: github.actor != 'dependabot[bot]'
+        if: |
+          contains(fromJSON('["OWNER", "MEMBER", "COLLABORATOR"]'), github.event.pull_request.author_association) &&
+          github.event.pull_request.head.repo.fork == false
         env:
           OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
           OP_ENVIRONMENT_ID: ${{ vars.OP_ENVIRONMENT_ID }}

@@ -11,29 +11,59 @@ on:
       - 'pyproject.toml'
       - 'mise.toml'
       - 'scripts/**'
+      # The workflow itself: gating changes must be exercised by the job
+      # they gate, or they ship unvalidated (issue #174).
+      - '.github/workflows/test-pipelines.yml'
 
 permissions:
   contents: read
 
+# The integration/e2e steps hit the shared dev warehouse and mutate dlt
+# state, so parallel runs must serialize rather than race (issue #174).
+# cancel-in-progress is false: a load must not be killed mid-flight.
+# Note the group is workflow-wide, so external mock-only PR runs also
+# serialize behind credentialed dev runs — accepted for warehouse safety.
+# This group is intentionally separate from test-transforms-dev-md: this
+# job's e2e tests target Databricks (unit/integration use local DuckDB),
+# while test-transforms' dev-md build writes MotherDuck personal_dev.
+concurrency:
+  group: test-pipelines-dev
+  cancel-in-progress: false
+
+# Credentialed steps (1Password, live integration/E2E tests, Codecov
+# upload) run only for non-fork PRs from a repo/org owner, collaborator
+# or member — just no externals. PR-controlled code executes in these
+# jobs, so `github.actor != 'dependabot[bot]'` is not a trust boundary
+# (issue #174). Fork PRs still get the offline unit tests and mock
+# builds. Fork PR security rests on the org's approval setting for
+# external workflows, not on these gates — a fork's workflow file can
+# drop any `if:`, and fork runs get no secrets anyway.
 jobs:
   test-pipelines:
+    # Dev credentials come from the `development` environment's secrets;
+    # prod credentials are never available to this job (issue #174).
+    environment: development
     timeout-minutes: 20
     runs-on: ubuntu-latest
     env:
       MISE_ENABLE_TOOLS: uv,python,databricks-cli
     steps:
       - name: checkout code
-        uses: actions/checkout@v5
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
 
       - name: set up mise and project tools
-        uses: jdx/mise-action@v4
+        uses: jdx/mise-action@c2a87611a18de5b3828c5652fe268e992400cb5c # v4
 
       - name: install project dependencies
         run: mise run setup
 
       - name: install 1Password CLI
-        if: github.actor != 'dependabot[bot]'
-        uses: 1password/install-cli-action@v4
+        if: |
+          contains(fromJSON('["OWNER", "MEMBER", "COLLABORATOR"]'), github.event.pull_request.author_association) &&
+          github.event.pull_request.head.repo.fork == false
+        uses: 1password/install-cli-action@1a3160d5e9de1ae0803eaa08a88746f5ae3daa50 # v4
         with:
           version: latest
 
@@ -45,7 +75,9 @@ jobs:
 
       - name: run integration tests
         id: run_int_tests
-        if: github.actor != 'dependabot[bot]'
+        if: |
+          contains(fromJSON('["OWNER", "MEMBER", "COLLABORATOR"]'), github.event.pull_request.author_association) &&
+          github.event.pull_request.head.repo.fork == false
         env:
           OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
           OP_ENVIRONMENT_ID: ${{ vars.OP_ENVIRONMENT_ID }}
@@ -54,26 +86,20 @@ jobs:
 
       - name: run e2e tests
         id: run_e2e_tests
-        if: github.actor != 'dependabot[bot]'
+        if: |
+          contains(fromJSON('["OWNER", "MEMBER", "COLLABORATOR"]'), github.event.pull_request.author_association) &&
+          github.event.pull_request.head.repo.fork == false
         env:
           OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
           OP_ENVIRONMENT_ID: ${{ vars.OP_ENVIRONMENT_ID }}
           RUNTIME__LOG_LEVEL: 'INFO'
         run: op run --environment "$OP_ENVIRONMENT_ID" -- mise run test-e2e
 
-      - name: check if tests ran
-        id: check_tests
-        if: always()
-        run: |
-          if [ "${{ steps.run_local_tests.outcome }}" != "skipped" ] || [ "${{ steps.run_int_tests.outcome }}" != "skipped" ] || [ "${{ steps.run_e2e_tests.outcome }}" != "skipped" ]; then
-            echo "tests_ran=true" >> $GITHUB_OUTPUT
-          else
-            echo "tests_ran=false" >> $GITHUB_OUTPUT
-          fi
-
       - name: upload coverage reports to Codecov
-        if: steps.check_tests.outputs.tests_ran == 'true'
-        uses: codecov/codecov-action@v5
+        if: |
+          contains(fromJSON('["OWNER", "MEMBER", "COLLABORATOR"]'), github.event.pull_request.author_association) &&
+          github.event.pull_request.head.repo.fork == false
+        uses: codecov/codecov-action@0fb7174895f61a3b6b78fc075e0cd60383518dac # v5
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           files: ./coverage.xml
@@ -82,8 +108,10 @@ jobs:
           fail_ci_if_error: true
 
       - name: upload test results to Codecov
-        if: steps.check_tests.outputs.tests_ran == 'true'
-        uses: codecov/codecov-action@v5
+        if: |
+          contains(fromJSON('["OWNER", "MEMBER", "COLLABORATOR"]'), github.event.pull_request.author_association) &&
+          github.event.pull_request.head.repo.fork == false
+        uses: codecov/codecov-action@0fb7174895f61a3b6b78fc075e0cd60383518dac # v5
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           files: ./test-results-local.xml,./test-results-e2e.xml

@@ -37,6 +37,18 @@ permissions:
 
 jobs:
   reconcile:
+    # Environment selection (issue #174): only scheduled runs use the
+    # ungated `production-scheduled` environment. Every other trigger
+    # (manual dispatch, or any future trigger) uses the gated
+    # `production` environment, so an unexpected trigger can never
+    # silently get prod credentials without approval. Scheduled runs
+    # always execute from `main`, so a workflow modified on a branch
+    # cannot be scheduled. `production-scheduled` should still be
+    # branch-restricted to `main`. The OP_SERVICE_ACCOUNT_TOKEN secret
+    # and OP_ENVIRONMENT_ID variable live in the environments, not at
+    # repo level, so jobs that don't reference one of these
+    # environments cannot read them.
+    environment: ${{ github.event_name == 'schedule' && 'production-scheduled' || 'production' }}
     runs-on: ubuntu-latest
     timeout-minutes: 60
     env:
@@ -48,7 +60,9 @@ jobs:
       TZ: UTC
     steps:
       - name: checkout code
-        uses: actions/checkout@v5
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
 
       - name: check first Sunday
         id: first_sunday
@@ -70,7 +84,7 @@ jobs:
 
       - name: set up mise and project tools
         if: steps.first_sunday.outputs.run == 'true'
-        uses: jdx/mise-action@v4
+        uses: jdx/mise-action@c2a87611a18de5b3828c5652fe268e992400cb5c # v4
 
       - name: install project dependencies
         if: steps.first_sunday.outputs.run == 'true'
@@ -82,7 +96,7 @@ jobs:
 
       - name: install 1Password CLI
         if: steps.first_sunday.outputs.run == 'true'
-        uses: 1password/install-cli-action@v4
+        uses: 1password/install-cli-action@1a3160d5e9de1ae0803eaa08a88746f5ae3daa50 # v4
         with:
           version: latest
 
@@ -138,7 +152,7 @@ jobs:
       # workflow always does a full refresh, which does not need prior state.
       - name: upload dlt state files
         if: always() && steps.first_sunday.outputs.run == 'true'
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
         with:
           name: monthly-reconciliation-pipeline-state
           path: |

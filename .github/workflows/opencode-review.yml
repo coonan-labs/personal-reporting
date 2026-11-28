@@ -6,15 +6,33 @@ on:
 
 jobs:
   review:
-    if: github.actor != 'dependabot[bot]'
+    # Review PRs from any repo/org owner, collaborator or member —
+    # just no externals. The review passes OPENCODE_API_KEY to the
+    # agent, so external PRs must not trigger it (issue #174).
+    # Agent tools are read-only (see the config below). Draft PRs are
+    # skipped; marking one ready triggers a review via ready_for_review.
+    # Concurrency cancels a stale review when a new push arrives.
+    # Fork PRs are skipped too: GitHub withholds secrets on fork
+    # pull_request runs, so the job would fail on an empty API key
+    # instead of skipping cleanly.
+    if: |
+      contains(fromJSON('["OWNER", "MEMBER", "COLLABORATOR"]'), github.event.pull_request.author_association) &&
+      github.event.pull_request.head.repo.fork == false &&
+      github.event.pull_request.draft == false
+    concurrency:
+      group: opencode-review-${{ github.event.pull_request.number }}
+      cancel-in-progress: true
     runs-on: ubuntu-latest
+    # A stuck agent must not burn the default 6h runner limit.
+    timeout-minutes: 30
     permissions:
+      # The opencode action fetches an OIDC token at startup; without
+      # this it fails before reviewing (issue #174).
       id-token: write
       contents: read
       pull-requests: write
-      issues: write
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           persist-credentials: false
 

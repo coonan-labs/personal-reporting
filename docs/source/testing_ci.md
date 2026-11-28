@@ -71,8 +71,11 @@ mise run dbt-bouncer
 ## 1Password and Databricks in CI
 
 Credentialed mise tasks use `op run --environment "$OP_ENVIRONMENT_ID" -- ...`.
-Configure `OP_SERVICE_ACCOUNT_TOKEN` as a GitHub secret and `OP_ENVIRONMENT_ID`
-as a repository variable. The 1Password Environment must export the dlt source
+Configure `OP_SERVICE_ACCOUNT_TOKEN` as an environment secret and
+`OP_ENVIRONMENT_ID` as an environment variable in each of the `development`,
+`production`, and `production-scheduled` GitHub environments (`development`
+holds dev/test credentials; the two prod environments hold the same prod
+credentials). The 1Password Environment must export the dlt source
 and destination variables. CI installs the 1Password CLI `latest`.
 
 The Databricks CLI task starts a stopped SQL warehouse and polls for `RUNNING`
@@ -103,7 +106,8 @@ Workflows are in `.github/workflows/`:
 - `test-pipelines.yml`, `test-transforms.yml`, `lint.yml` — CI tests and lint.
 - `docs.yml` — builds and deploys the Sphinx/dbt docs site.
 
-`test-transforms` builds the shared `dev-md` database (`personal.raw_dev`);
+`test-transforms` builds the `dev-md` database in the `development`
+environment (`personal_dev.raw_dev` / `personal_dev.reporting_dev`);
 the `test-transforms-dev-md` concurrency group serializes CI runs, but the job
 assumes `raw_dev` has been seeded by a prior load.
 

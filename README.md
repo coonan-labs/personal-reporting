@@ -236,9 +236,20 @@ file must include `GITHUB_TOKEN` set to the machine-user PAT.
 
 ### GitHub Actions Setup
 
-1. **Configure repository credentials**:
-   - `OP_SERVICE_ACCOUNT_TOKEN` (GitHub secret)
-   - `OP_ENVIRONMENT_ID` (GitHub variable containing the 1Password Environment ID)
+1. **Configure environment credentials** in each of the `development`,
+   `production`, and `production-scheduled` GitHub environments:
+   - `OP_SERVICE_ACCOUNT_TOKEN` (environment secret)
+   - `OP_ENVIRONMENT_ID` (environment variable containing the 1Password
+     Environment ID)
+   - `development` holds dev/test credentials; `production` and
+     `production-scheduled` hold the same prod credentials. `production`
+     requires approval for manual dispatches; `production-scheduled` has
+     no approval gate. Both prod environments must be branch-restricted
+     to `main` — the `production` restriction is what stops a
+     `workflow_dispatch` from a feature branch carrying modified
+     workflow code from reaching prod credentials after approval.
+     `development` must have no required reviewers and no branch
+     restriction, or PR test jobs cannot run.
    - Ensure the 1Password Environment exports the dlt source and Databricks
      variables used by the pipelines.
 
@@ -345,13 +356,21 @@ refresh_pipeline("hubspot")  # or refresh_pipeline("hubspot", is_incremental=Non
 
 #### GitHub Actions
 
+The job must specify one of the `development`, `production`, or
+`production-scheduled` environments — the credentials below come from
+the environment, and without it they resolve empty.
+
 ```yaml
-steps:
-  - name: run HubSpot pipeline
-    env:
-      OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
-      OP_ENVIRONMENT_ID: ${{ vars.OP_ENVIRONMENT_ID }}
-    run: mise run pipeline -- hubspot
+jobs:
+  run-hubspot:
+    runs-on: ubuntu-latest
+    environment: development
+    steps:
+      - name: run HubSpot pipeline
+        env:
+          OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
+          OP_ENVIRONMENT_ID: ${{ vars.OP_ENVIRONMENT_ID }}
+        run: mise run pipeline -- hubspot
 ```
 
 ### Environment Variables Reference
