@@ -244,7 +244,10 @@ file must include `GITHUB_TOKEN` set to the machine-user PAT.
    - `development` holds dev/test credentials; `production` and
      `production-scheduled` hold the same prod credentials. `production`
      requires approval for manual dispatches; `production-scheduled` has
-     no approval gate and must be branch-restricted to `main`.
+     no approval gate. Both prod environments must be branch-restricted
+     to `main` — the `production` restriction is what stops a
+     `workflow_dispatch` from a feature branch carrying modified
+     workflow code from reaching prod credentials after approval.
      `development` must have no required reviewers and no branch
      restriction, or PR test jobs cannot run.
    - Ensure the 1Password Environment exports the dlt source and Databricks

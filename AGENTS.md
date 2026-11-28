@@ -227,7 +227,7 @@ they are essential for ANY work in this project
 - `rest-api-pipeline-workflow`
 
 ## Secret Management
-Credentialed mise tasks run as `op run --environment "$OP_ENVIRONMENT_ID" -- ...`; the 1Password Environment exports the dlt source and Databricks environment variables. GitHub Actions uses `OP_SERVICE_ACCOUNT_TOKEN` plus the repository variable `OP_ENVIRONMENT_ID`. The 1Password CLI must support Environments.
+Credentialed mise tasks run as `op run --environment "$OP_ENVIRONMENT_ID" -- ...`; the 1Password Environment exports the dlt source and Databricks environment variables. GitHub Actions uses `OP_SERVICE_ACCOUNT_TOKEN` (environment secret) plus the environment variable `OP_ENVIRONMENT_ID`, set in each of the `development`, `production`, and `production-scheduled` environments. The 1Password CLI must support Environments.
 
 - **Local**: export `OP_ENVIRONMENT_ID` and `OP_SERVICE_ACCOUNT_TOKEN`, then use `mise run pipeline`, `mise run test-e2e`, or Databricks dbt tasks. `.env.databricks` is deprecated; credentialed values come from the selected 1Password Environment or `sbx` secrets.
 - **Warehouse preflight**: `scripts/databricks_warehouse.py` maps dlt's `DESTINATION__DATABRICKS__CREDENTIALS__*` values to native Databricks CLI authentication variables and starts the configured SQL warehouse before e2e, pipeline, and Databricks dbt runs. For dbt `test-db`/`prod-db`, the profiles read the dlt-style `DESTINATION__DATABRICKS__CREDENTIALS__CLIENT_ID` and `DESTINATION__DATABRICKS__CREDENTIALS__CLIENT_SECRET` directly; `dev-db` uses the dlt access token. MotherDuck `*-md` targets read `MOTHERDUCK_TOKEN` and `DESTINATION__MOTHERDUCK__CREDENTIALS__DATABASE`.
