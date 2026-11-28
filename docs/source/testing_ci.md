@@ -71,8 +71,11 @@ mise run dbt-bouncer
 ## 1Password and Databricks in CI
 
 Credentialed mise tasks use `op run --environment "$OP_ENVIRONMENT_ID" -- ...`.
-Configure `OP_SERVICE_ACCOUNT_TOKEN` as a GitHub secret and `OP_ENVIRONMENT_ID`
-as a repository variable. The 1Password Environment must export the dlt source
+Configure `OP_SERVICE_ACCOUNT_TOKEN` as an environment secret and
+`OP_ENVIRONMENT_ID` as an environment variable in each of the `development`,
+`production`, and `production-scheduled` GitHub environments (`development`
+holds dev/test credentials; the two prod environments hold the same prod
+credentials). The 1Password Environment must export the dlt source
 and destination variables. CI installs the 1Password CLI `latest`.
 
 The Databricks CLI task starts a stopped SQL warehouse and polls for `RUNNING`
