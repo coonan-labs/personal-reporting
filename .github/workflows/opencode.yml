@@ -14,14 +14,17 @@ jobs:
     # be able to run an agent with credentials and write permissions
     # (issue #174). For review comments, the PR must also not be a fork:
     # a trusted member commenting /oc on an external PR would otherwise
-    # run the agent with that PR's content in its prompt.
+    # run the agent with that PR's content in its prompt. The same
+    # applies to /oc in a PR conversation comment (issue_comment): the
+    # PR's author must also be a repo/org owner, collaborator or member.
     if: |
       contains(fromJSON('["OWNER", "MEMBER", "COLLABORATOR"]'), github.event.comment.author_association) &&
       (contains(github.event.comment.body, ' /oc') ||
       startsWith(github.event.comment.body, '/oc') ||
       contains(github.event.comment.body, ' /opencode') ||
       startsWith(github.event.comment.body, '/opencode')) &&
-      (github.event_name != 'pull_request_review_comment' || github.event.pull_request.head.repo.fork == false)
+      (github.event_name != 'pull_request_review_comment' || github.event.pull_request.head.repo.fork == false) &&
+      (github.event.issue.pull_request == null || contains(fromJSON('["OWNER", "MEMBER", "COLLABORATOR"]'), github.event.issue.author_association))
     runs-on: ubuntu-latest
     permissions:
       id-token: write

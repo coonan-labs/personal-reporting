@@ -12,8 +12,12 @@ jobs:
     # Agent tools are read-only (see the config below). Draft PRs are
     # skipped; marking one ready triggers a review via ready_for_review.
     # Concurrency cancels a stale review when a new push arrives.
+    # Fork PRs are skipped too: GitHub withholds secrets on fork
+    # pull_request runs, so the job would fail on an empty API key
+    # instead of skipping cleanly.
     if: |
       contains(fromJSON('["OWNER", "MEMBER", "COLLABORATOR"]'), github.event.pull_request.author_association) &&
+      github.event.pull_request.head.repo.fork == false &&
       github.event.pull_request.draft == false
     concurrency:
       group: opencode-review-${{ github.event.pull_request.number }}

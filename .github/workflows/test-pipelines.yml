@@ -18,6 +18,13 @@ on:
 permissions:
   contents: read
 
+# The integration/e2e steps hit the shared dev warehouse and mutate dlt
+# state, so parallel runs must serialize rather than race (issue #174).
+# cancel-in-progress is false: a load must not be killed mid-flight.
+concurrency:
+  group: test-pipelines-dev
+  cancel-in-progress: false
+
 # Credentialed steps (1Password, live integration/E2E tests, Codecov
 # upload) run only for non-fork PRs from a repo/org owner, collaborator
 # or member — just no externals. PR-controlled code executes in these
@@ -37,7 +44,9 @@ jobs:
       MISE_ENABLE_TOOLS: uv,python,databricks-cli
     steps:
       - name: checkout code
-        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
 
       - name: set up mise and project tools
         uses: jdx/mise-action@c2a87611a18de5b3828c5652fe268e992400cb5c # v4
