@@ -236,9 +236,17 @@ file must include `GITHUB_TOKEN` set to the machine-user PAT.
 
 ### GitHub Actions Setup
 
-1. **Configure repository credentials**:
-   - `OP_SERVICE_ACCOUNT_TOKEN` (GitHub secret)
-   - `OP_ENVIRONMENT_ID` (GitHub variable containing the 1Password Environment ID)
+1. **Configure environment credentials** in each of the `development`,
+   `production`, and `production-scheduled` GitHub environments:
+   - `OP_SERVICE_ACCOUNT_TOKEN` (environment secret)
+   - `OP_ENVIRONMENT_ID` (environment variable containing the 1Password
+     Environment ID)
+   - `development` holds dev/test credentials; `production` and
+     `production-scheduled` hold the same prod credentials. `production`
+     requires approval for manual dispatches; `production-scheduled` has
+     no approval gate and must be branch-restricted to `main`.
+     `development` must have no required reviewers and no branch
+     restriction, or PR test jobs cannot run.
    - Ensure the 1Password Environment exports the dlt source and Databricks
      variables used by the pipelines.
 
