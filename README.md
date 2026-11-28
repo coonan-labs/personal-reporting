@@ -154,7 +154,7 @@ of concerns:
 
    ```bash
    mise run test                                  # offline unit tests
-   mise run test-e2e                              # starts SQL warehouse, then runs cloud tests
+   mise run test-e2e                              # live-source cloud tests into MotherDuck
    mise run pipeline -- notion --full             # one dlt source
    mise run pipeline-all                          # all three dlt sources
    mise run dbt-build-mock                        # DuckDB fixture build
@@ -413,7 +413,8 @@ jobs:
    ```bash
    # Offline unit tests
    mise run test
-   # Live APIs + Databricks e2e tests (via the configured 1Password Environment)
+   # Live APIs + MotherDuck e2e tests (via the configured 1Password Environment);
+   # set E2E_TARGET=test-db for the Databricks fallback.
    mise run test-e2e
    ```
 3. **Test dbt models**:
@@ -512,7 +513,7 @@ On every push or merge to `main`, `.github/workflows/release.yml`:
 
 1. determines the next SemVer from Conventional Commits since the last `v*` tag,
 2. stamps `pyproject.toml` (`project.version`) and `dbt/dbt_project.yml`
-   (`version`) so release artifacts agree,
+   (`version`) and refreshes `uv.lock` so release artifacts agree,
 3. regenerates the complete `CHANGELOG.md` from the full release history,
 4. commits `chore(release): X.Y.Z`, tags `vX.Y.Z`, pushes both, and creates the
    GitHub Release.

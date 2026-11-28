@@ -5,10 +5,10 @@ This repo has two test systems: **pytest** for `pipelines/` (dlt) and **dbt buil
 | Layer | Location | Destination | pytest marker | Local command | CI workflow |
 | ----- | -------- | ----------- | ------------- | ------------- | ----------- |
 | dlt unit (offline) | `tests/unit/dlt/` | DuckDB (`local_unit_test` / `local_data`, `dev_mode=True`) | `local` | `mise run test` (`pytest tests/unit`) | `test-pipelines.yml` (always runs) |
-| Fixture-tooling unit | `tests/unit/scripts/` | none (pure functions, `tmp_path`, stubbed BQ client) | none | runs under `mise run test` | `test-pipelines.yml` via `test` |
+| Tooling unit | `tests/unit/scripts/` | none (pure functions, `tmp_path`, stubbed BQ client) | none | runs under `mise run test` | `test-pipelines.yml` via `test` |
 | dlt integration (live, opt-in) | `tests/integration/dlt/` | DuckDB / live APIs | `live` | `RUN_LIVE_API_TESTS=1 pytest tests/integration -m live` | not run in CI |
 | Fixture-tooling live | `tests/integration/scripts/` | DuckDB / live APIs | `live` | `RUN_LIVE_API_TESTS=1 pytest tests/integration -m live` | not run in CI |
-| dlt e2e (cloud) | `tests/e2e/dlt/` | Databricks (`live_e2e_test` / `live_data`, `dev_mode=True`) | `e2e` | `mise run test-e2e` (`pytest tests/e2e`) | `test-pipelines.yml` (only with 1Password Environment credentials; runs only for non-fork PRs from a repo/org owner, collaborator or member) |
+| dlt e2e (cloud) | `tests/e2e/dlt/` | MotherDuck by default, Databricks fallback (`live_e2e_test` / `live_data`, `dev_mode=True`) | `e2e` | `mise run test-e2e` (`E2E_TARGET=test-db` for Databricks) | `test-pipelines.yml` (only with 1Password Environment credentials; runs only for non-fork PRs from a repo/org owner, collaborator or member) |
 | dbt transform tests | `dbt/models/**/_*.yml`, `dbt/tests/` | DuckDB (`mock` target) in CI, Databricks otherwise | n/a (`dbt test` / `dbt build`) | `mise run dbt-build-mock`, `mise run dbt-build` | `test-transforms.yml`, `lint.yml` |
 
 > **Note:** the Fitbit dlt pipeline was removed (Fitbit API deprecation), and the
@@ -21,7 +21,7 @@ This repo has two test systems: **pytest** for `pipelines/` (dlt) and **dbt buil
 Defined in `pyproject.toml` (`[tool.pytest.ini_options]`) and `tests/conftest.py`:
 
 - `testpaths = ["tests"]`, `python_files = ["test_*.py"]`.
-- Markers: `e2e` (cloud Databricks), `live` (calls external APIs, explicit opt-in), `local` (offline).
+- Markers: `e2e` (cloud MotherDuck; Databricks fallback), `live` (calls external APIs, explicit opt-in), `local` (offline).
 - `addopts = "-s -p no:pytest-responses --log-cli-level=INFO"`: the `responses` mock library is activated explicitly per-test via the `mock_responses` fixture, so it never interferes with e2e tests.
 - Coverage: `source = ["pipelines"]`, branch coverage, reports to `coverage.xml` + `test-results-*.xml` uploaded to Codecov.
 - `tests/conftest.py` sets `TEST=True`, `DBT_TARGET=test-db`, `DBT_SCHEMA=reporting_test`, `RAW_SCHEMA=raw_test`, `RUNTIME__LOG_LEVEL=INFO`, and re-wires the `dlt` logger to pytest handlers.
@@ -83,13 +83,14 @@ reused by the e2e suite to keep runtimes low:
 
 ## dlt e2e tests (`tests/e2e/dlt/`, marker `e2e`)
 
-Cloud tests against real APIs + Databricks. `mise run test-e2e` starts and
-waits for the warehouse first, then runs the tests inside the configured
-1Password Environment. `conftest.py` re-enables Google Secrets
+Cloud tests against real APIs + MotherDuck by default, with Databricks as a
+fallback (`E2E_TARGET=test-db`). `mise run test-e2e` starts and waits for the
+warehouse only for the Databricks fallback, then runs the tests inside the
+configured 1Password Environment. `conftest.py` re-enables Google Secrets
 (`PROVIDERS__ENABLE_GOOGLE_SECRETS=true`, TOML fragments off, list-secrets on):
 
 - `check_config` (module autouse): asserts `GOOGLE_APPLICATION_CREDENTIALS` exists and the `GoogleSecretsProvider` is configured when `SECRET_STORE=google`.
-- `databricks_pipeline` (class-scoped): `dlt.pipeline(pipeline_name="live_e2e_test", destination="databricks", dataset_name="live_data", dev_mode=True)`; `cleanup_databricks_pipeline()` drops the catalog-qualified, dev-mode schema with `DROP SCHEMA IF EXISTS ... CASCADE`, then resets local dlt state even if remote deletion fails.
+- `e2e_pipeline` (class-scoped): `dlt.pipeline(pipeline_name="live_e2e_test", destination=get_destination(E2E_TARGET), dataset_name="live_data", dev_mode=True)`; `cleanup_e2e_pipeline()` drops the qualified, dev-mode schema with `DROP SCHEMA IF EXISTS ... CASCADE`, then resets local dlt state even if remote deletion fails.
 - `test_load_pipelines.py::TestPipelines`: `REFRESH_ARGS = LIVE_REFRESH_ARGS` (shared three-week window from `tests/test_live_test_range.py`) and one test per pipeline (`notion`, `hubspot`, `google_health`) via `refresh_pipeline()`, asserting `info.has_failed_jobs is False`. Google Health pre-reads its refresh-token secret.
 
 ## dbt tests
@@ -145,14 +146,14 @@ Mock source coverage lives in `dbt/test_fixtures/{google_health,hubspot,notion}/
 
 Credentialed tasks run inside `op run --environment "$OP_ENVIRONMENT_ID" -- ...`.
 The Databricks CLI starts the SQL warehouse and waits for `RUNNING`/`HEALTHY`
-before e2e tests and dlt pipeline runs.
+before dlt pipeline runs and the Databricks e2e fallback.
 
 ## Quick reference
 
 ```bash
 mise run test                                      # offline dlt unit tests
 mise run test-live                                 # opt-in live API tests
-mise run test-e2e                                  # live API + Databricks tests
+mise run test-e2e                                  # live API + MotherDuck tests
 mise run dbt-build-mock                            # local transform check
 mise run dbt -- test --target mock --select stg_google_health__sleep
 mise run dbt-bouncer                               # manifest checks

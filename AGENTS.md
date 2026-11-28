@@ -143,7 +143,7 @@ Note: habit completions and thresholds come from the Notion habit reference data
 ## Testing
 - `mise run setup` — install project Python dependencies with uv
 - `mise run test` — offline Python unit tests
-- `mise run test-e2e` — live-source / Databricks tests (starts and waits for the Databricks SQL warehouse)
+- `mise run test-e2e` — live-source cloud tests against MotherDuck; set `E2E_TARGET=test-db` for the Databricks fallback (starts the warehouse only then)
 - `mise run test-live` — opt-in live API integration tests; calls source APIs
 - `mise run pipeline -- <notion|hubspot|google_health> [args]` — run one dlt pipeline with a 1Password Environment
 - `mise run dbt-build-mock` — local dbt build (DuckDB + CSV test fixtures)
@@ -222,7 +222,7 @@ Every commit subject and PR title MUST follow [Conventional Commits](https://www
 `python-semantic-release` is configured in `pyproject.toml` (`[tool.semantic_release]`). On every push/merge to `main`, `.github/workflows/release.yml`:
 
 1. determines the next SemVer from commits since the last `v*` tag,
-2. stamps `pyproject.toml` (`project.version`) and `dbt/dbt_project.yml` (`version`),
+2. stamps `pyproject.toml` (`project.version`), `dbt/dbt_project.yml` (`version`), and `uv.lock`,
 3. regenerates the complete `CHANGELOG.md`,
 4. commits `chore(release): X.Y.Z`, tags `vX.Y.Z`, and creates the GitHub Release.
 
@@ -233,7 +233,7 @@ The first automated release is `v1.0.0` and covers all history before the workfl
 - **Pipeline functions**: `refresh_{source}()` (e.g., `refresh_hubspot()`)
 - **dbt staging**: `stg_{source}__{entity}`; intermediate: `int_{domain}_{description}`; marts: `dim_{entity}_v1` / `fct_{entity}_v1`
 - **GitHub Actions workflows**: `{action}-{frequency}` (e.g., `dlt-weekly`)
-- **Env vars**: `FORCE_FULL_REFRESH` (global), `{PIPELINE_NAME}_FULL_REFRESH` (per-pipeline)
+- **Env vars**: `FORCE_FULL_REFRESH` (global), `{PIPELINE_NAME}_FULL_REFRESH` (per-pipeline), `E2E_TARGET` (`test-md` default, `test-db` fallback)
 
 ## GitHub Actions Schedule
 - **HubSpot**: Mondays at 2 AM UTC
@@ -253,7 +253,7 @@ they are essential for ANY work in this project
 Credentialed mise tasks run as `op run --environment "$OP_ENVIRONMENT_ID" -- ...`; the 1Password Environment exports the dlt source and Databricks environment variables. GitHub Actions uses `OP_SERVICE_ACCOUNT_TOKEN` (environment secret) plus the environment variable `OP_ENVIRONMENT_ID`, set in each of the `development`, `production`, and `production-scheduled` environments. The 1Password CLI must support Environments.
 
 - **Local**: export `OP_ENVIRONMENT_ID` and `OP_SERVICE_ACCOUNT_TOKEN`, then use `mise run pipeline`, `mise run test-e2e`, or Databricks dbt tasks. `.env.databricks` is deprecated; credentialed values come from the selected 1Password Environment or `sbx` secrets.
-- **Warehouse preflight**: `scripts/databricks_warehouse.py` maps dlt's `DESTINATION__DATABRICKS__CREDENTIALS__*` values to native Databricks CLI authentication variables and starts the configured SQL warehouse before e2e, pipeline, and Databricks dbt runs. For dbt `test-db`/`prod-db`, the profiles read the dlt-style `DESTINATION__DATABRICKS__CREDENTIALS__CLIENT_ID` and `DESTINATION__DATABRICKS__CREDENTIALS__CLIENT_SECRET` directly; `dev-db` uses the dlt access token. MotherDuck `*-md` targets read `MOTHERDUCK_TOKEN` and `DESTINATION__MOTHERDUCK__CREDENTIALS__DATABASE`.
+- **Warehouse preflight**: `scripts/databricks_warehouse.py` maps dlt's `DESTINATION__DATABRICKS__CREDENTIALS__*` values to native Databricks CLI authentication variables and starts the configured SQL warehouse before pipeline/Databricks dbt runs and e2e when `E2E_TARGET` is a `*-db` target. For dbt `test-db`/`prod-db`, the profiles read the dlt-style `DESTINATION__DATABRICKS__CREDENTIALS__CLIENT_ID` and `DESTINATION__DATABRICKS__CREDENTIALS__CLIENT_SECRET` directly; `dev-db` uses the dlt access token. MotherDuck `*-md` targets read `MOTHERDUCK_TOKEN` and `DESTINATION__MOTHERDUCK__CREDENTIALS__DATABASE`.
 - **Release automation**: `release.yml` uses `GITHUB_TOKEN`; add an optional `RELEASE_TOKEN` secret only when branch protection blocks the Actions token from pushing the release commit and tag.
 
 ## Agentic Coding (Docker AI Sandbox preferred; agent devcontainer alternative)

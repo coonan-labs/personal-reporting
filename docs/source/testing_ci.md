@@ -8,14 +8,14 @@ Python tests and dbt workflows are run through the project tasks in
 ```bash
 mise run test          # offline tests using fixtures and DuckDB
 mise run test-live     # opt-in live APIs, loading to temporary DuckDB
-mise run test-e2e      # live APIs and Databricks
+mise run test-e2e      # live APIs and MotherDuck (Databricks fallback)
 mise run test-all      # offline tests followed by e2e
 ```
 
 Live API integration tests call real sources and can use API quota. The e2e
-task starts the configured Databricks SQL warehouse and waits until it is
-healthy before invoking pytest.
-The e2e fixture drops its catalog-qualified, dev-mode test schema after the
+task loads into MotherDuck by default; set `E2E_TARGET=test-db` to use the
+Databricks fallback, which also starts the configured SQL warehouse and waits
+until it is healthy. The e2e fixture drops its dev-mode test schema after the
 class completes and resets local dlt state in a `finally` block.
 
 ## dbt tests and development

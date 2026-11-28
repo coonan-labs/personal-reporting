@@ -1,11 +1,11 @@
-"""Cleanup helpers for Databricks end-to-end pipeline tests."""
+"""Cleanup helpers for end-to-end pipeline tests."""
 
 from __future__ import annotations
 
 from typing import Any
 
 
-def cleanup_databricks_pipeline(pipeline: Any) -> None:
+def cleanup_e2e_pipeline(pipeline: Any) -> None:
     """Drop the remote test schema and always clear the local dlt pipeline state."""
     pipeline_name = getattr(pipeline, "pipeline_name", "unknown")
     try:
