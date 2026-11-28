@@ -1,0 +1,48 @@
+name: Conventional Commits
+
+on:
+  pull_request:
+    branches:
+      - main
+    types:
+      - opened
+      - edited
+      - reopened
+      - synchronize
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Validate pull request title
+        env:
+          PR_TITLE: ${{ github.event.pull_request.title }}
+        run: python3 scripts/check_conventional_commits.py --message "$PR_TITLE"
+
+      - name: Validate pull request commits
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -o pipefail
+          if [ "$BASE_SHA" = "$HEAD_SHA" ]; then
+            echo "No commits to validate"
+            exit 0
+          fi
+          commits="$(git log --format=%s "$BASE_SHA..$HEAD_SHA")"
+          if [ -z "$commits" ]; then
+            echo "error: no commits found between $BASE_SHA and $HEAD_SHA" >&2
+            exit 1
+          fi
+          printf '%s\n' "$commits" \
+            | python3 scripts/check_conventional_commits.py --stdin

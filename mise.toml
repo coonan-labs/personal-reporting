@@ -1,5 +1,5 @@
 [tools]
-uv = "latest"
+uv = "0.13.10"
 python = "3.13"
 opencode = "1.19.0"
 "databricks-cli" = "latest"
@@ -38,10 +38,15 @@ raw_args = true
 run = 'env RUN_LIVE_API_TESTS=1 uv run pytest tests/integration -m live -v -s'
 
 [tasks.test-e2e]
-description = "Run cloud end-to-end tests (starts the Databricks warehouse)"
-depends = ["databricks-start"]
+description = "Run cloud end-to-end tests (MotherDuck by default; E2E_TARGET=test-db for Databricks)"
 raw_args = true
-run = 'uv run pytest tests/e2e --log-cli-level=INFO --cov --cov-append --cov-report=xml --junitxml=test-results-e2e.xml -v -s'
+run = '''
+set -e
+case "${E2E_TARGET:-test-md}" in
+  *-db) uv run python scripts/databricks_warehouse.py ;;
+esac
+uv run pytest tests/e2e --log-cli-level=INFO --cov --cov-append --cov-report=xml --junitxml=test-results-e2e.xml -v -s
+'''
 
 [tasks.test-all]
 description = "Run offline unit tests followed by cloud e2e tests"
@@ -165,6 +170,10 @@ run = "uv run dbt-bouncer --config-file dbt/dbt-bouncer.yml"
 [tasks.lint]
 description = "Run repository prek checks"
 run = "uv run prek run -c prek.yml --all-files"
+
+[tasks.release-preview]
+description = "Print the next semantic version and tag (run on main; fetch tags first)"
+run = "uv run semantic-release version --print-tag"
 
 [tasks.coverage]
 description = "Show Python coverage and generate the HTML report"

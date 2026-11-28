@@ -1,0 +1,62 @@
+name: Release
+
+on:
+  push:
+    branches:
+      - main
+  # Manual dispatch must select main; the job guard skips other refs.
+  workflow_dispatch:
+
+# Least privilege at the workflow level; the release job needs to write tags,
+# commits, and GitHub Releases.
+permissions:
+  contents: read
+
+jobs:
+  release:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.ref_name }}
+      cancel-in-progress: false
+    permissions:
+      contents: write
+    env:
+      MISE_ENABLE_TOOLS: uv,python
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # PSR needs tags and full history to determine the next version.
+          fetch-depth: 0
+          ref: ${{ github.ref_name }}
+          # Use a bypass token when branch protection rejects GITHUB_TOKEN.
+          token: ${{ secrets.RELEASE_TOKEN || secrets.GITHUB_TOKEN }}
+
+      - name: Reset release branch to workflow SHA
+        # Release exactly the commit this run evaluated. PSR calls
+        # verify_upstream_unchanged() before pushing and aborts if main moved,
+        # so this cannot push onto a stale base.
+        env:
+          WORKFLOW_SHA: ${{ github.sha }}
+        run: git reset --hard "$WORKFLOW_SHA"
+
+      - name: Set up mise and project tools
+        uses: jdx/mise-action@924e7c586e33d7d4bae9c14e26c5d22e2beb6e78 # v5.3.0
+
+      - name: Configure git identity
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: Install locked dependencies
+        run: uv sync --frozen
+
+      - name: Determine and publish release
+        # Run the lock-pinned python-semantic-release. PSR runs `uv lock`
+        # (configured as build_command) so uv.lock is stamped and committed
+        # with the release.
+        env:
+          GH_TOKEN: ${{ secrets.RELEASE_TOKEN || secrets.GITHUB_TOKEN }}
+        run: uv run --frozen semantic-release version

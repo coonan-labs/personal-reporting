@@ -18,14 +18,11 @@ on:
 permissions:
   contents: read
 
-# The integration/e2e steps hit the shared dev warehouse and mutate dlt
-# state, so parallel runs must serialize rather than race (issue #174).
-# cancel-in-progress is false: a load must not be killed mid-flight.
-# Note the group is workflow-wide, so external mock-only PR runs also
-# serialize behind credentialed dev runs — accepted for warehouse safety.
-# This group is intentionally separate from test-transforms-dev-md: this
-# job's e2e tests target Databricks (unit/integration use local DuckDB),
-# while test-transforms' dev-md build writes MotherDuck personal_dev.
+# The integration/e2e steps load live data and mutate dlt state, so parallel
+# runs must serialize rather than race (issue #174). cancel-in-progress is
+# false: a load must not be killed mid-flight. The e2e runs target MotherDuck
+# (unit/integration use local DuckDB) in an isolated dev-mode schema, so they
+# use a separate group from test-transforms-dev-md.
 concurrency:
   group: test-pipelines-dev
   cancel-in-progress: false
@@ -46,7 +43,10 @@ jobs:
     timeout-minutes: 20
     runs-on: ubuntu-latest
     env:
+      # databricks-cli is only used when E2E_TARGET points at the Databricks
+      # fallback (test-db); the default E2E path is MotherDuck.
       MISE_ENABLE_TOOLS: uv,python,databricks-cli
+      E2E_TARGET: test-md
     steps:
       - name: checkout code
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -84,7 +84,7 @@ jobs:
           RUNTIME__LOG_LEVEL: 'INFO'
         run: op run --environment "$OP_ENVIRONMENT_ID" -- mise run test-live
 
-      - name: run e2e tests
+      - name: run e2e tests (MotherDuck)
         id: run_e2e_tests
         if: |
           contains(fromJSON('["OWNER", "MEMBER", "COLLABORATOR"]'), github.event.pull_request.author_association) &&
@@ -93,6 +93,8 @@ jobs:
           OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
           OP_ENVIRONMENT_ID: ${{ vars.OP_ENVIRONMENT_ID }}
           RUNTIME__LOG_LEVEL: 'INFO'
+        # The development 1Password Environment must export MOTHERDUCK_TOKEN
+        # and DESTINATION__MOTHERDUCK__CREDENTIALS__DATABASE.
         run: op run --environment "$OP_ENVIRONMENT_ID" -- mise run test-e2e
 
       - name: upload coverage reports to Codecov

@@ -1,1 +1,1 @@
-"""Unit tests for the developer utility scripts in ``scripts/fixtures``."""
+"""Unit tests for developer scripts and release/commit configuration."""

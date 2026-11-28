@@ -19,7 +19,7 @@ credentialed values through the selected 1Password Environment, or configure
 | --- | --- |
 | `mise run test` | Offline Python unit tests |
 | `mise run test-live` | Opt-in integration tests against live APIs and temporary DuckDB |
-| `mise run test-e2e` | Live API + Databricks tests |
+| `mise run test-e2e` | Live API + MotherDuck tests (set `E2E_TARGET=test-db` for the Databricks fallback) |
 | `mise run test-all` | Unit tests followed by e2e tests |
 | `mise run pipeline -- notion [args]` | Run one dlt source (starts the Databricks warehouse for `*-db` targets) |
 | `mise run pipeline-md -- notion [args]` | Run one dlt source into a MotherDuck target (no warehouse start) |
@@ -34,6 +34,7 @@ credentialed values through the selected 1Password Environment, or configure
 | `mise run dbt-bouncer` | Run dbt-bouncer checks |
 | `mise run docs` | Build dbt and Sphinx documentation |
 | `mise run lint` | Run all prek checks |
+| `mise run release-preview` | Print the next semantic version tag (run on `main`; fetch tags first) |
 | `mise run coverage` | Print coverage and generate HTML |
 | `mise run clean` | Remove local test/build/documentation artifacts |
 
@@ -80,9 +81,10 @@ Transient capacity rejections are retried with backoff (up to 6 attempts),
 soft-bounded by a 15-minute overall deadline (checked at loop boundaries,
 so it can overshoot by up to a CLI timeout plus a poll interval).
 For PAT authentication, it maps the dlt `ACCESS_TOKEN` to `DATABRICKS_TOKEN`.
-`pipeline`, `pipeline-all`, `test-e2e`, `dbt-build`, and `dbt-source-freshness`
-perform this preflight automatically. The `pipeline-md` and `dbt-build-md`
-tasks skip it (no Databricks warehouse is involved) but require a `-md` target. To start it separately, run
+`pipeline`, `pipeline-all`, `dbt-build`, and `dbt-source-freshness` perform
+this preflight automatically, as does `test-e2e` when `E2E_TARGET` is a `*-db`
+target. The `pipeline-md` and `dbt-build-md` tasks skip it (no Databricks
+warehouse is involved) but require a `-md` target. To start it separately, run
 `mise run databricks-start`. The task command definitions are in `mise.toml`;
 `scripts/databricks_warehouse.py` handles the warehouse start/wait logic and
 the `docs` task builds Sphinx output and copies the dbt SPA. The dbt redirect is

@@ -1,6 +1,6 @@
 [project]
 name = "personal-reporting-pipelines"
-version = "1.0.0"
+version = "0.1.0"
 description = "Personal data integration and analytics platform tracking personal disciplines/habits"
 requires-python = ">=3.12,<3.14"
 dependencies = [
@@ -28,12 +28,14 @@ dev = [
     "responses",
     "faker",
     "marimo",
+    "pyyaml",
     "sphinx",
     "sphinx-rtd-theme",
     "myst-parser",
     "sphinx-autoapi",
     "dbt-bouncer",
     "yamlfix>=1.19.1",
+    "python-semantic-release==10.7.0",
 ]
 
 [tool.uv]
@@ -42,6 +44,56 @@ dev = [
 # proposes) would force dropping the Databricks stack, the primary target, so
 # hold it below 4.0.0 to keep the lockfile resolvable.
 constraint-dependencies = ["oauthlib<4.0.0"]
+
+[tool.semantic_release]
+# Semantic versioning is derived from Conventional Commit messages. The next
+# version is stamped into the Python project and the dbt project so release
+# artifacts always agree with the generated tag.
+version_toml = ["pyproject.toml:project.version"]
+version_variables = ["dbt/dbt_project.yml:version"]
+allow_zero_version = true
+major_on_zero = false
+tag_format = "v{version}"
+commit_parser = "conventional"
+# Release commits must also be valid Conventional Commits.
+commit_message = "chore(release): {version}"
+commit_author = "github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>"
+# Keep uv.lock's project version in sync with pyproject.toml before the release
+# commit is created, then include the lockfile in that commit.
+build_command = "uv lock"
+assets = ["uv.lock"]
+# Do not run repository hooks on the automated release commit.
+no_git_verify = true
+
+[tool.semantic_release.branches.main]
+match = "^main$"
+prerelease = false
+
+[tool.semantic_release.commit_parser_options]
+# Same types the commit check enforces. `revert` is a valid Conventional
+# Commit type but is not in the parser default, so it is added explicitly.
+allowed_tags = [
+  "build",
+  "chore",
+  "ci",
+  "docs",
+  "feat",
+  "fix",
+  "perf",
+  "refactor",
+  "revert",
+  "style",
+  "test",
+]
+
+[tool.semantic_release.changelog]
+# Regenerate the changelog from the complete tag history on every release so
+# checked-in entries can never drift or duplicate.
+mode = "init"
+
+[tool.semantic_release.changelog.default_templates]
+changelog_file = "CHANGELOG.md"
+mask_initial_release = false
 
 [tool.ruff]
 line-length = 100

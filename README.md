@@ -1,20 +1,21 @@
-# personal-reporting-pipelines
+# personal-reporting
 
 #### Development and Documentation
 
-[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/michaelconan/personal-reporting-pipelines)
-[![codecov](https://codecov.io/gh/michaelconan/personal-reporting-pipelines/branch/main/graph/badge.svg)](https://codecov.io/gh/michaelconan/personal-reporting-pipelines)
+[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/coonan-labs/personal-reporting)
+[![codecov](https://codecov.io/gh/coonan-labs/personal-reporting/branch/main/graph/badge.svg)](https://codecov.io/gh/coonan-labs/personal-reporting)
 
-[![Test Pipelines](https://github.com/michaelconan/personal-reporting-pipelines/actions/workflows/test-pipelines.yml/badge.svg)](https://github.com/michaelconan/personal-reporting-pipelines/actions/workflows/test-pipelines.yml)
-[![Test Transforms](https://github.com/michaelconan/personal-reporting-pipelines/actions/workflows/test-transforms.yml/badge.svg)](https://github.com/michaelconan/personal-reporting-pipelines/actions/workflows/test-transforms.yml)
-[![Publish Docs](https://github.com/michaelconan/personal-reporting-pipelines/actions/workflows/docs.yml/badge.svg)](https://github.com/michaelconan/personal-reporting-pipelines/actions/workflows/docs.yml)
+[![Test Pipelines](https://github.com/coonan-labs/personal-reporting/actions/workflows/test-pipelines.yml/badge.svg)](https://github.com/coonan-labs/personal-reporting/actions/workflows/test-pipelines.yml)
+[![Test Transforms](https://github.com/coonan-labs/personal-reporting/actions/workflows/test-transforms.yml/badge.svg)](https://github.com/coonan-labs/personal-reporting/actions/workflows/test-transforms.yml)
+[![Publish Docs](https://github.com/coonan-labs/personal-reporting/actions/workflows/docs.yml/badge.svg)](https://github.com/coonan-labs/personal-reporting/actions/workflows/docs.yml)
+[![Release](https://github.com/coonan-labs/personal-reporting/actions/workflows/release.yml/badge.svg)](https://github.com/coonan-labs/personal-reporting/actions/workflows/release.yml)
 
 #### Data Refresh Workflows
 
-[![Refresh HubSpot](https://github.com/michaelconan/personal-reporting-pipelines/actions/workflows/refresh-hubspot.yml/badge.svg)](https://github.com/michaelconan/personal-reporting-pipelines/actions/workflows/refresh-hubspot.yml)
-[![Refresh Notion](https://github.com/michaelconan/personal-reporting-pipelines/actions/workflows/refresh-notion.yml/badge.svg)](https://github.com/michaelconan/personal-reporting-pipelines/actions/workflows/refresh-notion.yml)
+[![Refresh HubSpot](https://github.com/coonan-labs/personal-reporting/actions/workflows/refresh-hubspot.yml/badge.svg)](https://github.com/coonan-labs/personal-reporting/actions/workflows/refresh-hubspot.yml)
+[![Refresh Notion](https://github.com/coonan-labs/personal-reporting/actions/workflows/refresh-notion.yml/badge.svg)](https://github.com/coonan-labs/personal-reporting/actions/workflows/refresh-notion.yml)
 
-[![Run Transformations](https://github.com/michaelconan/personal-reporting-pipelines/actions/workflows/run-transforms.yml/badge.svg)](https://github.com/michaelconan/personal-reporting-pipelines/actions/workflows/run-transforms.yml)
+[![Run Transformations](https://github.com/coonan-labs/personal-reporting/actions/workflows/run-transforms.yml/badge.svg)](https://github.com/coonan-labs/personal-reporting/actions/workflows/run-transforms.yml)
 
 Personal data integration and analytics platform using dlt (ingestion into
 MotherDuck, with Databricks Unity Catalog retained for the transition) and dbt
@@ -137,7 +138,7 @@ of concerns:
 
    ```bash
    git clone <repository-url>
-   cd personal-reporting-pipelines
+   cd personal-reporting
    mise install
    mise run setup
    ```
@@ -153,7 +154,7 @@ of concerns:
 
    ```bash
    mise run test                                  # offline unit tests
-   mise run test-e2e                              # starts SQL warehouse, then runs cloud tests
+   mise run test-e2e                              # live-source cloud tests into MotherDuck
    mise run pipeline -- notion --full             # one dlt source
    mise run pipeline-all                          # all three dlt sources
    mise run dbt-build-mock                        # DuckDB fixture build
@@ -412,7 +413,8 @@ jobs:
    ```bash
    # Offline unit tests
    mise run test
-   # Live APIs + Databricks e2e tests (via the configured 1Password Environment)
+   # Live APIs + MotherDuck e2e tests (via the configured 1Password Environment);
+   # set E2E_TARGET=test-db for the Databricks fallback.
    mise run test-e2e
    ```
 3. **Test dbt models**:
@@ -473,6 +475,69 @@ select * from final
 
 This convention applies to every model (staging, core, intermediate, and marts).
 
+## Versioning and Releases
+
+Versions follow [Semantic Versioning](https://semver.org/) and are derived
+automatically from [Conventional Commits](https://www.conventionalcommits.org/)
+by [python-semantic-release](https://python-semantic-release.readthedocs.io/).
+The rules are enforced on every pull request by
+`.github/workflows/commit-conventions.yml`.
+
+### Commit and PR title format
+
+Every commit subject and pull request title must use
+`<type>(<scope>): <description>`, for example:
+
+```text
+feat(dbt): add fct_health_data_gaps mart
+fix(ci): stop duplicate lint runs on push
+docs: document the release workflow
+```
+
+The type drives the release:
+
+| Commit type | Release impact |
+| --- | --- |
+| `feat` | minor bump |
+| `fix`, `perf` | patch bump |
+| Any type with `!` after the scope or a `BREAKING CHANGE:` footer | major bump (minor while `0.x`, see below) |
+| `build`, `chore`, `ci`, `docs`, `refactor`, `revert`, `style`, `test` | no release |
+
+The scope is optional. Pull request titles are validated because the repository
+squash-merges: the PR title becomes the commit subject on `main`. Merge commits,
+GitHub `Revert "..."` commits, autosquash prefixes (`fixup!`, `squash!`,
+`amend!`), and release commits (`chore(release): X.Y.Z`) are exempt.
+
+### Automated release flow
+
+On every push or merge to `main`, `.github/workflows/release.yml`:
+
+1. determines the next SemVer from Conventional Commits since the last `v*` tag,
+2. stamps `pyproject.toml` (`project.version`) and `dbt/dbt_project.yml`
+   (`version`) and refreshes `uv.lock` so release artifacts agree,
+3. regenerates the complete `CHANGELOG.md` from the full release history,
+4. commits `chore(release): X.Y.Z`, tags `vX.Y.Z`, pushes both, and creates the
+   GitHub Release.
+
+Zero-versioning is enabled (`allow_zero_version = true`,
+`major_on_zero = false`), so the project starts at `v0.1.0`. The first
+automated release is `v0.1.0` and covers all history before the workflow was
+enabled; later releases bump from that tag. The workflow is the
+only writer of the version fields and `CHANGELOG.md`; do not hand-edit either.
+Branch protection must allow the Actions `GITHUB_TOKEN` to push the release
+commit and tag to `main`. If it does not, add a fine-grained `RELEASE_TOKEN`
+secret (`Contents: write`, with a branch-rule bypass); the workflow uses it
+automatically when present. A release pushed with `GITHUB_TOKEN` does not
+re-trigger workflows; with `RELEASE_TOKEN` it does, and the follow-up release
+run is a no-op because release commits do not produce a new version.
+
+Preview the next release locally (run from `main`):
+
+```bash
+git fetch --tags           # fresh clones need the release tags
+mise run release-preview   # print the next tag without changing files
+```
+
 ## GitHub Actions Orchestration
 
 ### Workflow Structure
@@ -481,8 +546,10 @@ The project uses GitHub Actions for automated pipeline execution:
 
 - **Scheduled runs**: Weekly automated data ingestion
 - **Manual triggers**: On-demand pipeline execution with full refresh options
-- **Pull request validation**: Automated testing on code changes
+- **Pull request validation**: Automated testing plus Conventional Commit checks
 - **Deployment**: Automated deployment to production environment
+- **Releases**: Semantic version bumps, changelog, tags, and GitHub Releases on
+  merge to `main`
 
 ### Monitoring and Alerts
 
