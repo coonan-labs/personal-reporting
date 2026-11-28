@@ -15,8 +15,10 @@ jobs:
     # (issue #174). For review comments, the PR must also not be a fork:
     # a trusted member commenting /oc on an external PR would otherwise
     # run the agent with that PR's content in its prompt. The same
-    # applies to /oc in a PR conversation comment (issue_comment): the
-    # PR's author must also be a repo/org owner, collaborator or member.
+    # applies to /oc in a conversation comment (issue_comment): the
+    # issue or PR's author must also be trusted — a member commenting
+    # on an outsider's issue or an external PR would otherwise run the
+    # agent on untrusted text (issue #174).
     if: |
       contains(fromJSON('["OWNER", "MEMBER", "COLLABORATOR"]'), github.event.comment.author_association) &&
       (contains(github.event.comment.body, ' /oc') ||
@@ -24,8 +26,10 @@ jobs:
       contains(github.event.comment.body, ' /opencode') ||
       startsWith(github.event.comment.body, '/opencode')) &&
       (github.event_name != 'pull_request_review_comment' || github.event.pull_request.head.repo.fork == false) &&
-      (github.event.issue.pull_request == null || contains(fromJSON('["OWNER", "MEMBER", "COLLABORATOR"]'), github.event.issue.author_association))
+      (github.event_name != 'issue_comment' || contains(fromJSON('["OWNER", "MEMBER", "COLLABORATOR"]'), github.event.issue.author_association))
     runs-on: ubuntu-latest
+    # A stuck agent must not burn the default 6h runner limit.
+    timeout-minutes: 60
     permissions:
       id-token: write
       contents: read

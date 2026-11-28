@@ -23,6 +23,8 @@ jobs:
       group: opencode-review-${{ github.event.pull_request.number }}
       cancel-in-progress: true
     runs-on: ubuntu-latest
+    # A stuck agent must not burn the default 6h runner limit.
+    timeout-minutes: 30
     permissions:
       # The opencode action fetches an OIDC token at startup; without
       # this it fails before reviewing (issue #174).

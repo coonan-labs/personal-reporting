@@ -11,6 +11,8 @@ jobs:
     # must not trigger it (issue #174).
     if: contains(fromJSON('["OWNER", "MEMBER", "COLLABORATOR"]'), github.event.issue.author_association)
     runs-on: ubuntu-latest
+    # A stuck agent must not burn the default 6h runner limit.
+    timeout-minutes: 30
     permissions:
       id-token: write
       contents: read
