@@ -517,11 +517,15 @@ On every push or merge to `main`, `.github/workflows/release.yml`:
 4. commits `chore(release): X.Y.Z`, tags `vX.Y.Z`, pushes both, and creates the
    GitHub Release.
 
-The workflow is the only writer of the version fields and `CHANGELOG.md`; do not
-hand-edit either. Branch protection must allow the Actions `GITHUB_TOKEN` to
-push the release commit and tag to `main`. If it does not, add a fine-grained
-`RELEASE_TOKEN` secret (`Contents: write`, with a branch-rule bypass); the
-workflow uses it automatically when present.
+The first automated release is `v1.0.0` and covers all history before the
+workflow was enabled; later releases bump from that tag. The workflow is the
+only writer of the version fields and `CHANGELOG.md`; do not hand-edit either.
+Branch protection must allow the Actions `GITHUB_TOKEN` to push the release
+commit and tag to `main`. If it does not, add a fine-grained `RELEASE_TOKEN`
+secret (`Contents: write`, with a branch-rule bypass); the workflow uses it
+automatically when present. A release pushed with `GITHUB_TOKEN` does not
+re-trigger workflows; with `RELEASE_TOKEN` it does, and the follow-up release
+run is a no-op because release commits do not produce a new version.
 
 Preview the next release locally (run from `main`):
 

@@ -15,6 +15,7 @@ jobs:
   release:
     if: github.event_name == 'push' || github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     concurrency:
       group: ${{ github.workflow }}-${{ github.ref_name }}
       cancel-in-progress: false
@@ -24,6 +25,8 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          # PSR needs tags and full history to determine the next version.
+          fetch-depth: 0
           ref: ${{ github.ref_name }}
           # Use a bypass token when branch protection rejects GITHUB_TOKEN.
           token: ${{ secrets.RELEASE_TOKEN || secrets.GITHUB_TOKEN }}

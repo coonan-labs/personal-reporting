@@ -226,7 +226,7 @@ Every commit subject and PR title MUST follow [Conventional Commits](https://www
 3. regenerates the complete `CHANGELOG.md`,
 4. commits `chore(release): X.Y.Z`, tags `vX.Y.Z`, and creates the GitHub Release.
 
-Never hand-edit the version fields or `CHANGELOG.md`. `.github/workflows/commit-conventions.yml` validates PR titles and commits with `scripts/check_conventional_commits.py`; `mise run release-preview` prints the next tag (run it on `main`). Branch protection must allow the Actions `GITHUB_TOKEN` to push the release commit and tag to `main`; if it does not, add a fine-grained `RELEASE_TOKEN` secret (`Contents: write`, branch-rule bypass) and the workflow will use it.
+The first automated release is `v1.0.0` and covers all history before the workflow was enabled. Never hand-edit the version fields or `CHANGELOG.md`. `.github/workflows/commit-conventions.yml` validates PR titles and commits with `scripts/check_conventional_commits.py`; `mise run release-preview` prints the next tag (run it on `main`). Branch protection must allow the Actions `GITHUB_TOKEN` to push the release commit and tag to `main`; if it does not, add a fine-grained `RELEASE_TOKEN` secret (`Contents: write`, branch-rule bypass) and the workflow will use it.
 
 ## Naming Conventions
 - **dlt tables**: `{source}__{entity}` (e.g., `hubspot__contacts`)
