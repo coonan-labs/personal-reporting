@@ -2,20 +2,20 @@
 
 #### Development and Documentation
 
-[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/michaelconan/personal-reporting-pipelines)
-[![codecov](https://codecov.io/gh/michaelconan/personal-reporting-pipelines/branch/main/graph/badge.svg)](https://codecov.io/gh/michaelconan/personal-reporting-pipelines)
+[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/coonan-labs/personal-reporting)
+[![codecov](https://codecov.io/gh/coonan-labs/personal-reporting/branch/main/graph/badge.svg)](https://codecov.io/gh/coonan-labs/personal-reporting)
 
-[![Test Pipelines](https://github.com/michaelconan/personal-reporting-pipelines/actions/workflows/test-pipelines.yml/badge.svg)](https://github.com/michaelconan/personal-reporting-pipelines/actions/workflows/test-pipelines.yml)
-[![Test Transforms](https://github.com/michaelconan/personal-reporting-pipelines/actions/workflows/test-transforms.yml/badge.svg)](https://github.com/michaelconan/personal-reporting-pipelines/actions/workflows/test-transforms.yml)
-[![Publish Docs](https://github.com/michaelconan/personal-reporting-pipelines/actions/workflows/docs.yml/badge.svg)](https://github.com/michaelconan/personal-reporting-pipelines/actions/workflows/docs.yml)
-[![Release](https://github.com/michaelconan/personal-reporting-pipelines/actions/workflows/release.yml/badge.svg)](https://github.com/michaelconan/personal-reporting-pipelines/actions/workflows/release.yml)
+[![Test Pipelines](https://github.com/coonan-labs/personal-reporting/actions/workflows/test-pipelines.yml/badge.svg)](https://github.com/coonan-labs/personal-reporting/actions/workflows/test-pipelines.yml)
+[![Test Transforms](https://github.com/coonan-labs/personal-reporting/actions/workflows/test-transforms.yml/badge.svg)](https://github.com/coonan-labs/personal-reporting/actions/workflows/test-transforms.yml)
+[![Publish Docs](https://github.com/coonan-labs/personal-reporting/actions/workflows/docs.yml/badge.svg)](https://github.com/coonan-labs/personal-reporting/actions/workflows/docs.yml)
+[![Release](https://github.com/coonan-labs/personal-reporting/actions/workflows/release.yml/badge.svg)](https://github.com/coonan-labs/personal-reporting/actions/workflows/release.yml)
 
 #### Data Refresh Workflows
 
-[![Refresh HubSpot](https://github.com/michaelconan/personal-reporting-pipelines/actions/workflows/refresh-hubspot.yml/badge.svg)](https://github.com/michaelconan/personal-reporting-pipelines/actions/workflows/refresh-hubspot.yml)
-[![Refresh Notion](https://github.com/michaelconan/personal-reporting-pipelines/actions/workflows/refresh-notion.yml/badge.svg)](https://github.com/michaelconan/personal-reporting-pipelines/actions/workflows/refresh-notion.yml)
+[![Refresh HubSpot](https://github.com/coonan-labs/personal-reporting/actions/workflows/refresh-hubspot.yml/badge.svg)](https://github.com/coonan-labs/personal-reporting/actions/workflows/refresh-hubspot.yml)
+[![Refresh Notion](https://github.com/coonan-labs/personal-reporting/actions/workflows/refresh-notion.yml/badge.svg)](https://github.com/coonan-labs/personal-reporting/actions/workflows/refresh-notion.yml)
 
-[![Run Transformations](https://github.com/michaelconan/personal-reporting-pipelines/actions/workflows/run-transforms.yml/badge.svg)](https://github.com/michaelconan/personal-reporting-pipelines/actions/workflows/run-transforms.yml)
+[![Run Transformations](https://github.com/coonan-labs/personal-reporting/actions/workflows/run-transforms.yml/badge.svg)](https://github.com/coonan-labs/personal-reporting/actions/workflows/run-transforms.yml)
 
 Personal data integration and analytics platform using dlt (ingestion into
 MotherDuck, with Databricks Unity Catalog retained for the transition) and dbt

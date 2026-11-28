@@ -34,5 +34,6 @@ jobs:
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: |
+          set -o pipefail
           git log --format=%s "$BASE_SHA..$HEAD_SHA" \
             | python3 scripts/check_conventional_commits.py --stdin

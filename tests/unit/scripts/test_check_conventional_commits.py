@@ -23,6 +23,8 @@ from scripts.check_conventional_commits import find_invalid_messages, main, vali
         "chore(release): 1.2.3",
         "chore(release): 1.2.3-rc.1",
         "chore(release): 1.2.3+build.7",
+        "fixup! feat: add release workflow",
+        "squash! fix(ci): correct checkout depth",
     ],
 )
 def test_validate_message_accepts_conventional_and_merge_commits(message):
@@ -38,6 +40,7 @@ def test_validate_message_accepts_conventional_and_merge_commits(message):
         "feat add missing colon",
         "feat:",
         "feat(): empty scope",
+        "fixup! Update documentation",
     ],
 )
 def test_validate_message_rejects_non_conventional_commits(message):

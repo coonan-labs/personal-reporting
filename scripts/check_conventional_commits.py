@@ -30,6 +30,7 @@ MERGE_COMMIT_RE = re.compile(r"^Merge\b")
 RELEASE_COMMIT_RE = re.compile(
     r"^chore\(release\): \d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$"
 )
+AUTOSQUASH_PREFIX_RE = re.compile(r"^(?:fixup|squash|amend)! ")
 
 
 def validate_message(message: str) -> str | None:
@@ -39,10 +40,12 @@ def validate_message(message: str) -> str | None:
         return "commit message is empty"
     if MERGE_COMMIT_RE.match(subject) or RELEASE_COMMIT_RE.match(subject):
         return None
+    original_subject = subject
+    subject = AUTOSQUASH_PREFIX_RE.sub("", subject)
     if CONVENTIONAL_COMMIT_RE.match(subject):
         return None
     return (
-        f"{subject!r} is not a Conventional Commit; expected "
+        f"{original_subject!r} is not a Conventional Commit; expected "
         "'<type>(<scope>): <description>' with type one of " + ", ".join(CONVENTIONAL_TYPES)
     )
 

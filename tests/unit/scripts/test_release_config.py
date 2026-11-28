@@ -2,10 +2,16 @@
 
 from __future__ import annotations
 
+import shutil
 import tomllib
 from pathlib import Path
 
 import yaml
+from semantic_release.version.declaration import (
+    PatternVersionDeclaration,
+    TomlVersionDeclaration,
+)
+from semantic_release.version.version import Version
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 
@@ -23,3 +29,33 @@ def test_dbt_project_version_matches_pyproject_version():
     dbt_project = yaml.safe_load((REPO_ROOT / "dbt" / "dbt_project.yml").read_text())
 
     assert str(dbt_project["version"]) == pyproject["project"]["version"]
+
+
+def test_semantic_release_stamps_both_version_files(tmp_path, monkeypatch):
+    pyproject = tomllib.loads((REPO_ROOT / "pyproject.toml").read_text())
+    release = pyproject["tool"]["semantic_release"]
+    new_version = Version.parse("9.8.7")
+
+    (tmp_path / "dbt").mkdir()
+    shutil.copy(
+        REPO_ROOT / "dbt" / "dbt_project.yml",
+        tmp_path / "dbt" / "dbt_project.yml",
+    )
+    shutil.copy(REPO_ROOT / "pyproject.toml", tmp_path / "pyproject.toml")
+    monkeypatch.chdir(tmp_path)
+
+    for definition in release["version_toml"]:
+        declaration = TomlVersionDeclaration.from_string_definition(definition)
+        assert declaration.update_file_w_version(new_version) is not None
+
+    for definition in release["version_variables"]:
+        declaration = PatternVersionDeclaration.from_string_definition(
+            definition, release["tag_format"]
+        )
+        assert declaration.update_file_w_version(new_version) is not None
+
+    stamped_pyproject = tomllib.loads((tmp_path / "pyproject.toml").read_text())
+    assert stamped_pyproject["project"]["version"] == "9.8.7"
+
+    stamped_dbt = yaml.safe_load((tmp_path / "dbt" / "dbt_project.yml").read_text())
+    assert str(stamped_dbt["version"]) == "9.8.7"

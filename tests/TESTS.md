@@ -58,6 +58,8 @@ Each source file (`test_notion_unit.py`, `test_hubspot_unit.py`, `test_google_he
 - `test_e2e_cleanup.py`: asserts remote e2e schema deletion uses the fully qualified dataset and that local pipeline state is reset even when schema deletion raises.
 - `tests/unit/scripts/test_export_mock_responses.py`: pure-function tests for `scripts/fixtures/export_mock_responses.py` — response capture, paginator override (single-page), incremental-limit override, wide export date ranges, dlt-metadata URL matching, cursor sorting, PII scrubbing, 3/2/1 split validation, registry-driven dispatch, and `save_captured_responses()` end-to-end to `tmp_path`.
 - `tests/unit/scripts/test_export_mock_seeds.py`: offline tests for `scripts/fixtures/export_mock_seeds.py` with a stubbed BigQuery client — env config, dynamic source discovery from `*_sources.yml`, BigQuery type normalization, scrubbed CSV export, parallel `export_all()` summary, and CLI wiring.
+- `tests/unit/scripts/test_check_conventional_commits.py`: Conventional Commit validation for PR titles and commit subjects, including merge, release, autosquash, and breaking-change exemptions.
+- `tests/unit/scripts/test_release_config.py`: asserts python-semantic-release stamps `pyproject.toml` and `dbt/dbt_project.yml`, and that both version fields currently agree.
 
 ## Fixtures (`tests/fixtures/`)
 
