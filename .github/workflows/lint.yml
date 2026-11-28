@@ -13,6 +13,11 @@ permissions:
 
 jobs:
   lint:
+    # A push to a PR branch fires both `push` and `pull_request`, which
+    # would run this job twice. The push run already covers same-repo
+    # PRs, so skip the pull_request run unless the PR is from a fork —
+    # fork pushes never trigger workflows here (issue #174).
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.fork == true
     runs-on: ubuntu-latest
     env:
       MISE_ENABLE_TOOLS: uv,python
