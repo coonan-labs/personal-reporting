@@ -104,6 +104,11 @@ Workflows are in `.github/workflows/`:
   `prod-db`) or MotherDuck (`dev-md`, `test-md`, `prod-md`) target;
   `prod-*` runs require the matching `confirm_prod` input.
 - `test-pipelines.yml`, `test-transforms.yml`, `lint.yml` — CI tests and lint.
+- `commit-conventions.yml` — validates pull request titles and commits against
+  the Conventional Commits specification.
+- `release.yml` — runs python-semantic-release on merge to `main` to bump
+  `pyproject.toml` and `dbt/dbt_project.yml`, regenerate `CHANGELOG.md`, tag the
+  release, and create the GitHub Release.
 - `docs.yml` — builds and deploys the Sphinx/dbt docs site.
 
 `test-transforms` builds the `dev-md` database in the `development`

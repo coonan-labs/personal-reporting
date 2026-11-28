@@ -36,8 +36,13 @@ Current agentic workflow: `weekly-doc-updater` — runs every Monday, opens a PR
 - `pipelines/hs_config.yml` — HubSpot object/property config
 - `pipelines/__init__.py` — Shared constants: BASE_DATE, DBT_TARGET, DBT_SCHEMA, RAW_SCHEMA
 - `dbt/seeds/group_connect_cadence.csv` — Target connection cadence per group tier
-- `dbt/dbt_project.yml` — dbt config (profile, materializations, vars)
+- `dbt/dbt_project.yml` — dbt config (profile, materializations, vars) and `version` (stamped by releases)
 - `dbt/profiles.yml` — dev-db/test-db/prod-db=Databricks, dev-bq/test-bq/prod-bq=BigQuery (rollback), dev-md/test-md/prod-md=MotherDuck, mock=DuckDB
+- `.github/workflows/release.yml` — python-semantic-release on merge to `main`
+- `.github/workflows/commit-conventions.yml` — PR title and commit message validation
+- `scripts/check_conventional_commits.py` — Conventional Commit validator used by CI
+- `CHANGELOG.md` — generated release history (do not hand-edit)
+- `pyproject.toml` — `[tool.semantic_release]` config and `project.version` (stamped by releases)
 
 ## Source Resolution (no make_source macro)
 There is no `make_source` macro. Models call `{{ source(source_name, relation_name) }}` directly for every target:
@@ -206,6 +211,23 @@ Co-authored-by: OpenCode (<model>) <opencode-agent[bot]@users.noreply.github.com
 
 Use the session's model id with the provider prefix removed (e.g. a session running `opencode-go/deepseek-v4.1-flash` uses `deepseek-v4.1-flash`). The commit author stays the dedicated machine user (`Conan Assistant`); the trailer records the model. When rewriting history, add the trailer to each commit rather than only the tip.
 
+### Conventional Commits and releases (required)
+Every commit subject and PR title MUST follow [Conventional Commits](https://www.conventionalcommits.org/): `<type>(<scope>): <description>`.
+
+- Allowed types: `build`, `chore`, `ci`, `docs`, `feat`, `fix`, `perf`, `refactor`, `revert`, `style`, `test`.
+- `feat` → minor bump; `fix`/`perf` → patch bump; `!` after the type/scope or a `BREAKING CHANGE:` footer → major bump.
+- `build`, `chore`, `ci`, `docs`, `refactor`, `revert`, `style`, and `test` do not bump the version.
+- Merge commits and `chore(release): X.Y.Z` release commits are exempt.
+
+`python-semantic-release` is configured in `pyproject.toml` (`[tool.semantic_release]`). On every push/merge to `main`, `.github/workflows/release.yml`:
+
+1. determines the next SemVer from commits since the last `v*` tag,
+2. stamps `pyproject.toml` (`project.version`) and `dbt/dbt_project.yml` (`version`),
+3. regenerates the complete `CHANGELOG.md`,
+4. commits `chore(release): X.Y.Z`, tags `vX.Y.Z`, and creates the GitHub Release.
+
+Never hand-edit the version fields or `CHANGELOG.md`. `.github/workflows/commit-conventions.yml` validates PR titles and commits with `scripts/check_conventional_commits.py`; `mise run release-preview` prints the next tag (run it on `main`). Branch protection must allow the Actions `GITHUB_TOKEN` to push the release commit and tag to `main`; if it does not, add a fine-grained `RELEASE_TOKEN` secret (`Contents: write`, branch-rule bypass) and the workflow will use it.
+
 ## Naming Conventions
 - **dlt tables**: `{source}__{entity}` (e.g., `hubspot__contacts`)
 - **Pipeline functions**: `refresh_{source}()` (e.g., `refresh_hubspot()`)
@@ -218,6 +240,7 @@ Use the session's model id with the provider prefix removed (e.g. a session runn
 - **Notion**: Mondays at 4 AM UTC
 - **Google Health**: Mondays at 5 AM UTC
 - **dbt Transform**: Mondays at 6 AM UTC (after ingestion)
+- **Release**: On every push/merge to `main` (not scheduled)
 - **Weekly doc updater**: Every Monday (gh-aw agentic workflow)
 
 
@@ -231,6 +254,7 @@ Credentialed mise tasks run as `op run --environment "$OP_ENVIRONMENT_ID" -- ...
 
 - **Local**: export `OP_ENVIRONMENT_ID` and `OP_SERVICE_ACCOUNT_TOKEN`, then use `mise run pipeline`, `mise run test-e2e`, or Databricks dbt tasks. `.env.databricks` is deprecated; credentialed values come from the selected 1Password Environment or `sbx` secrets.
 - **Warehouse preflight**: `scripts/databricks_warehouse.py` maps dlt's `DESTINATION__DATABRICKS__CREDENTIALS__*` values to native Databricks CLI authentication variables and starts the configured SQL warehouse before e2e, pipeline, and Databricks dbt runs. For dbt `test-db`/`prod-db`, the profiles read the dlt-style `DESTINATION__DATABRICKS__CREDENTIALS__CLIENT_ID` and `DESTINATION__DATABRICKS__CREDENTIALS__CLIENT_SECRET` directly; `dev-db` uses the dlt access token. MotherDuck `*-md` targets read `MOTHERDUCK_TOKEN` and `DESTINATION__MOTHERDUCK__CREDENTIALS__DATABASE`.
+- **Release automation**: `release.yml` uses `GITHUB_TOKEN`; add an optional `RELEASE_TOKEN` secret only when branch protection blocks the Actions token from pushing the release commit and tag.
 
 ## Agentic Coding (Docker AI Sandbox preferred; agent devcontainer alternative)
 The preferred environment for AI agent work (`opencode`, `claude`, `codex`) is Docker AI Sandbox configured by the repository-root `sbxenv.yaml`; the `.devcontainer/agent` is the second supported option. Both use a **dedicated GitHub machine user** scoped to this repo (collaborator, **Write** only, fine-grained PAT limited to this repo: `Contents: read/write`, `Pull requests: read/write`, `Metadata: read`). Never use a personal token. Full guide: `docs/source/agent_container.md`.

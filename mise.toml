@@ -166,6 +166,10 @@ run = "uv run dbt-bouncer --config-file dbt/dbt-bouncer.yml"
 description = "Run repository prek checks"
 run = "uv run prek run -c prek.yml --all-files"
 
+[tasks.release-preview]
+description = "Print the next semantic version and tag (run on main)"
+run = "uv run semantic-release version --print-tag"
+
 [tasks.coverage]
 description = "Show Python coverage and generate the HTML report"
 run = [

@@ -8,6 +8,7 @@
 [![Test Pipelines](https://github.com/michaelconan/personal-reporting-pipelines/actions/workflows/test-pipelines.yml/badge.svg)](https://github.com/michaelconan/personal-reporting-pipelines/actions/workflows/test-pipelines.yml)
 [![Test Transforms](https://github.com/michaelconan/personal-reporting-pipelines/actions/workflows/test-transforms.yml/badge.svg)](https://github.com/michaelconan/personal-reporting-pipelines/actions/workflows/test-transforms.yml)
 [![Publish Docs](https://github.com/michaelconan/personal-reporting-pipelines/actions/workflows/docs.yml/badge.svg)](https://github.com/michaelconan/personal-reporting-pipelines/actions/workflows/docs.yml)
+[![Release](https://github.com/michaelconan/personal-reporting-pipelines/actions/workflows/release.yml/badge.svg)](https://github.com/michaelconan/personal-reporting-pipelines/actions/workflows/release.yml)
 
 #### Data Refresh Workflows
 
@@ -473,6 +474,61 @@ select * from final
 
 This convention applies to every model (staging, core, intermediate, and marts).
 
+## Versioning and Releases
+
+Versions follow [Semantic Versioning](https://semver.org/) and are derived
+automatically from [Conventional Commits](https://www.conventionalcommits.org/)
+by [python-semantic-release](https://python-semantic-release.readthedocs.io/).
+The rules are enforced on every pull request by
+`.github/workflows/commit-conventions.yml`.
+
+### Commit and PR title format
+
+Every commit subject and pull request title must use
+`<type>(<scope>): <description>`, for example:
+
+```text
+feat(dbt): add fct_health_data_gaps mart
+fix(ci): stop duplicate lint runs on push
+docs: document the release workflow
+```
+
+The type drives the release:
+
+| Commit type | Release impact |
+| --- | --- |
+| `feat` | minor bump |
+| `fix`, `perf` | patch bump |
+| Any type with `!` after the scope or a `BREAKING CHANGE:` footer | major bump |
+| `build`, `chore`, `ci`, `docs`, `refactor`, `revert`, `style`, `test` | no release |
+
+The scope is optional. Pull request titles are validated because the repository
+squash-merges: the PR title becomes the commit subject on `main`. Merge commits
+and release commits (`chore(release): X.Y.Z`) are exempt.
+
+### Automated release flow
+
+On every push or merge to `main`, `.github/workflows/release.yml`:
+
+1. determines the next SemVer from Conventional Commits since the last `v*` tag,
+2. stamps `pyproject.toml` (`project.version`) and `dbt/dbt_project.yml`
+   (`version`) so release artifacts agree,
+3. regenerates the complete `CHANGELOG.md` from the full release history,
+4. commits `chore(release): X.Y.Z`, tags `vX.Y.Z`, pushes both, and creates the
+   GitHub Release.
+
+The workflow is the only writer of the version fields and `CHANGELOG.md`; do not
+hand-edit either. Branch protection must allow the Actions `GITHUB_TOKEN` to
+push the release commit and tag to `main`. If it does not, add a fine-grained
+`RELEASE_TOKEN` secret (`Contents: write`, with a branch-rule bypass); the
+workflow uses it automatically when present.
+
+Preview the next release locally (run from `main`):
+
+```bash
+mise run release-preview   # print the next tag without changing files
+```
+
 ## GitHub Actions Orchestration
 
 ### Workflow Structure
@@ -481,8 +537,10 @@ The project uses GitHub Actions for automated pipeline execution:
 
 - **Scheduled runs**: Weekly automated data ingestion
 - **Manual triggers**: On-demand pipeline execution with full refresh options
-- **Pull request validation**: Automated testing on code changes
+- **Pull request validation**: Automated testing plus Conventional Commit checks
 - **Deployment**: Automated deployment to production environment
+- **Releases**: Semantic version bumps, changelog, tags, and GitHub Releases on
+  merge to `main`
 
 ### Monitoring and Alerts
 

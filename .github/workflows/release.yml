@@ -1,0 +1,59 @@
+name: Release
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+# Least privilege at the workflow level; the release job needs to write tags,
+# commits, and GitHub Releases.
+permissions:
+  contents: read
+
+jobs:
+  release:
+    if: github.event_name == 'push' || github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.ref_name }}
+      cancel-in-progress: false
+    permissions:
+      contents: write
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.ref_name }}
+          # Use a bypass token when branch protection rejects GITHUB_TOKEN.
+          token: ${{ secrets.RELEASE_TOKEN || secrets.GITHUB_TOKEN }}
+
+      - name: Reset release branch to workflow SHA
+        env:
+          WORKFLOW_SHA: ${{ github.sha }}
+        run: git reset --hard "$WORKFLOW_SHA"
+
+      - name: Determine and publish release
+        id: release
+        uses: python-semantic-release/python-semantic-release@b700dbeb1f431a0fcc30a79f3f0869407fe07278 # v10.7.0
+        with:
+          github_token: ${{ secrets.RELEASE_TOKEN || secrets.GITHUB_TOKEN }}
+          git_committer_name: "github-actions[bot]"
+          git_committer_email: "41898282+github-actions[bot]@users.noreply.github.com"
+          # No distribution build: releases are version stamps, tags, and the
+          # generated changelog.
+          build: "false"
+
+      - name: Summarize release
+        if: steps.release.outputs.released == 'true'
+        env:
+          RELEASE_TAG: ${{ steps.release.outputs.tag }}
+          RELEASE_VERSION: ${{ steps.release.outputs.version }}
+          RELEASE_URL: ${{ steps.release.outputs.link }}
+        run: |
+          {
+            echo "## Released ${RELEASE_TAG}"
+            echo ""
+            echo "- Version: \`${RELEASE_VERSION}\`"
+            echo "- Release: ${RELEASE_URL}"
+          } >> "$GITHUB_STEP_SUMMARY"
