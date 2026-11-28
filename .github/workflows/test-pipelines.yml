@@ -11,6 +11,9 @@ on:
       - 'pyproject.toml'
       - 'mise.toml'
       - 'scripts/**'
+      # The workflow itself: gating changes must be exercised by the job
+      # they gate, or they ship unvalidated (issue #174).
+      - '.github/workflows/test-pipelines.yml'
 
 permissions:
   contents: read

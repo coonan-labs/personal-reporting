@@ -12,6 +12,9 @@ on:
       - 'scripts/validate_target.py'
       - 'pipelines/targets.py'
       - 'tests/unit/dbt/test_source_external_location.py'
+      # The workflow itself: gating changes must be exercised by the job
+      # they gate, or they ship unvalidated (issue #174).
+      - '.github/workflows/test-transforms.yml'
 
 permissions:
   contents: 'read'
