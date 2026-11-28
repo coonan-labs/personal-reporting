@@ -356,13 +356,21 @@ refresh_pipeline("hubspot")  # or refresh_pipeline("hubspot", is_incremental=Non
 
 #### GitHub Actions
 
+The job must specify one of the `development`, `production`, or
+`production-scheduled` environments — the credentials below come from
+the environment, and without it they resolve empty.
+
 ```yaml
-steps:
-  - name: run HubSpot pipeline
-    env:
-      OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
-      OP_ENVIRONMENT_ID: ${{ vars.OP_ENVIRONMENT_ID }}
-    run: mise run pipeline -- hubspot
+jobs:
+  run-hubspot:
+    runs-on: ubuntu-latest
+    environment: development
+    steps:
+      - name: run HubSpot pipeline
+        env:
+          OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
+          OP_ENVIRONMENT_ID: ${{ vars.OP_ENVIRONMENT_ID }}
+        run: mise run pipeline -- hubspot
 ```
 
 ### Environment Variables Reference
