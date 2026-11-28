@@ -31,6 +31,7 @@ RELEASE_COMMIT_RE = re.compile(
     r"^chore\(release\): \d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$"
 )
 AUTOSQUASH_PREFIX_RE = re.compile(r"^(?:fixup|squash|amend)! ")
+REVERT_PR_RE = re.compile(r'^Revert ".*"$')
 
 
 def validate_message(message: str) -> str | None:
@@ -38,7 +39,11 @@ def validate_message(message: str) -> str | None:
     subject = message.strip().splitlines()[0] if message.strip() else ""
     if not subject:
         return "commit message is empty"
-    if MERGE_COMMIT_RE.match(subject) or RELEASE_COMMIT_RE.match(subject):
+    if (
+        MERGE_COMMIT_RE.match(subject)
+        or RELEASE_COMMIT_RE.match(subject)
+        or REVERT_PR_RE.match(subject)
+    ):
         return None
     original_subject = subject
     subject = AUTOSQUASH_PREFIX_RE.sub("", subject)

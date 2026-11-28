@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main
+  # Manual dispatch must select main; the job guard skips other refs.
   workflow_dispatch:
 
 # Least privilege at the workflow level; the release job needs to write tags,
@@ -21,6 +22,8 @@ jobs:
       cancel-in-progress: false
     permissions:
       contents: write
+    env:
+      MISE_ENABLE_TOOLS: uv,python
     steps:
       - name: Check out repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -32,31 +35,24 @@ jobs:
           token: ${{ secrets.RELEASE_TOKEN || secrets.GITHUB_TOKEN }}
 
       - name: Reset release branch to workflow SHA
+        # Release exactly the commit this run evaluated. PSR verifies the
+        # upstream has not moved before it pushes the release commit/tag.
         env:
           WORKFLOW_SHA: ${{ github.sha }}
         run: git reset --hard "$WORKFLOW_SHA"
 
-      - name: Determine and publish release
-        id: release
-        uses: python-semantic-release/python-semantic-release@b700dbeb1f431a0fcc30a79f3f0869407fe07278 # v10.7.0
-        with:
-          github_token: ${{ secrets.RELEASE_TOKEN || secrets.GITHUB_TOKEN }}
-          git_committer_name: "github-actions[bot]"
-          git_committer_email: "41898282+github-actions[bot]@users.noreply.github.com"
-          # No distribution build: releases are version stamps, tags, and the
-          # generated changelog.
-          build: "false"
+      - name: Set up mise and project tools
+        uses: jdx/mise-action@924e7c586e33d7d4bae9c14e26c5d22e2beb6e78 # v5.3.0
 
-      - name: Summarize release
-        if: steps.release.outputs.released == 'true'
-        env:
-          RELEASE_TAG: ${{ steps.release.outputs.tag }}
-          RELEASE_VERSION: ${{ steps.release.outputs.version }}
-          RELEASE_URL: ${{ steps.release.outputs.link }}
+      - name: Configure git identity
         run: |
-          {
-            echo "## Released ${RELEASE_TAG}"
-            echo ""
-            echo "- Version: \`${RELEASE_VERSION}\`"
-            echo "- Release: ${RELEASE_URL}"
-          } >> "$GITHUB_STEP_SUMMARY"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: Determine and publish release
+        # Keep the pinned CLI version in sync with the python-semantic-release
+        # dev dependency in pyproject.toml. PSR runs `uv lock` (configured as
+        # build_command) so uv.lock is stamped and committed with the release.
+        env:
+          GH_TOKEN: ${{ secrets.RELEASE_TOKEN || secrets.GITHUB_TOKEN }}
+        run: uvx --from python-semantic-release==10.7.0 semantic-release version

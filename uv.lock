@@ -1789,7 +1789,7 @@ dev = [
     { name = "pytest-cov" },
     { name = "pytest-dotenv" },
     { name = "pytest-mock" },
-    { name = "python-semantic-release", specifier = ">=10.7.0,<11" },
+    { name = "python-semantic-release", specifier = "==10.7.0" },
     { name = "responses" },
     { name = "ruff" },
     { name = "sphinx" },

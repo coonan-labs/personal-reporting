@@ -34,7 +34,7 @@ dev = [
     "sphinx-autoapi",
     "dbt-bouncer",
     "yamlfix>=1.19.1",
-    "python-semantic-release>=10.7.0,<11",
+    "python-semantic-release==10.7.0",
 ]
 
 [tool.uv]
@@ -56,6 +56,10 @@ commit_parser = "conventional"
 # Release commits must also be valid Conventional Commits.
 commit_message = "chore(release): {version}"
 commit_author = "github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>"
+# Keep uv.lock's project version in sync with pyproject.toml before the release
+# commit is created, then include the lockfile in that commit.
+build_command = "uv lock"
+assets = ["uv.lock"]
 # Do not run repository hooks on the automated release commit.
 no_git_verify = true
 
