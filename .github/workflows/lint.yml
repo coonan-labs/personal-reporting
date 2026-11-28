@@ -4,9 +4,9 @@ on:
   pull_request:
     branches:
       - main
+  # All branches, not just main: lint is quick and catches issues
+  # before a PR is opened (issue #174).
   push:
-    branches:
-      - main
 
 permissions:
   contents: read
