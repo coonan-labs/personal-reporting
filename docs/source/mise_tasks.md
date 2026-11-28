@@ -34,7 +34,7 @@ credentialed values through the selected 1Password Environment, or configure
 | `mise run dbt-bouncer` | Run dbt-bouncer checks |
 | `mise run docs` | Build dbt and Sphinx documentation |
 | `mise run lint` | Run all prek checks |
-| `mise run release-preview` | Print the next semantic version tag (run on `main`) |
+| `mise run release-preview` | Print the next semantic version tag (run on `main`; fetch tags first) |
 | `mise run coverage` | Print coverage and generate HTML |
 | `mise run clean` | Remove local test/build/documentation artifacts |
 

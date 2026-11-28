@@ -8,7 +8,7 @@ sources:
     config:
       # Freshness is measured from the dlt load timestamp: join each row's
       # _dlt_load_id to dlt's _dlt_loads metadata table and take the latest
-      # completed load. See https://github.com/michaelconan/personal-reporting-pipelines/issues/141
+      # completed load. See https://github.com/coonan-labs/personal-reporting/issues/141
       # Weekly ingestion (Mondays 02:00 UTC); freshness runs ~4h later.
       # The 7/8-day SLA matches the weekly cadence: any run within the
       # week passes, while a missed Monday load warns on the Monday

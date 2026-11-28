@@ -16,7 +16,7 @@ jobs:
   release:
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
     concurrency:
       group: ${{ github.workflow }}-${{ github.ref_name }}
       cancel-in-progress: false
@@ -49,10 +49,13 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
+      - name: Install locked dependencies
+        run: uv sync --frozen
+
       - name: Determine and publish release
-        # Keep the pinned CLI version in sync with the python-semantic-release
-        # dev dependency in pyproject.toml. PSR runs `uv lock` (configured as
-        # build_command) so uv.lock is stamped and committed with the release.
+        # Run the lock-pinned python-semantic-release. PSR runs `uv lock`
+        # (configured as build_command) so uv.lock is stamped and committed
+        # with the release.
         env:
           GH_TOKEN: ${{ secrets.RELEASE_TOKEN || secrets.GITHUB_TOKEN }}
-        run: uvx --from python-semantic-release==10.7.0 semantic-release version
+        run: uv run --frozen semantic-release version

@@ -1729,7 +1729,7 @@ wheels = [
 
 [[package]]
 name = "personal-reporting-pipelines"
-version = "1.0.0"
+version = "0.1.0"
 source = { virtual = "." }
 dependencies = [
     { name = "dbt" },
@@ -1755,6 +1755,7 @@ dev = [
     { name = "pytest-dotenv" },
     { name = "pytest-mock" },
     { name = "python-semantic-release" },
+    { name = "pyyaml" },
     { name = "responses" },
     { name = "ruff" },
     { name = "sphinx" },
@@ -1790,6 +1791,7 @@ dev = [
     { name = "pytest-dotenv" },
     { name = "pytest-mock" },
     { name = "python-semantic-release", specifier = "==10.7.0" },
+    { name = "pyyaml" },
     { name = "responses" },
     { name = "ruff" },
     { name = "sphinx" },

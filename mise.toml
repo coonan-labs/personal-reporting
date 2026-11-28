@@ -1,5 +1,5 @@
 [tools]
-uv = "latest"
+uv = "0.13.10"
 python = "3.13"
 opencode = "1.19.0"
 "databricks-cli" = "latest"
@@ -172,7 +172,7 @@ description = "Run repository prek checks"
 run = "uv run prek run -c prek.yml --all-files"
 
 [tasks.release-preview]
-description = "Print the next semantic version and tag (run on main)"
+description = "Print the next semantic version and tag (run on main; fetch tags first)"
 run = "uv run semantic-release version --print-tag"
 
 [tasks.coverage]

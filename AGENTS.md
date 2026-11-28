@@ -217,7 +217,7 @@ Every commit subject and PR title MUST follow [Conventional Commits](https://www
 - Allowed types: `build`, `chore`, `ci`, `docs`, `feat`, `fix`, `perf`, `refactor`, `revert`, `style`, `test`.
 - `feat` → minor bump; `fix`/`perf` → patch bump; `!` after the type/scope or a `BREAKING CHANGE:` footer → major bump.
 - `build`, `chore`, `ci`, `docs`, `refactor`, `revert`, `style`, and `test` do not bump the version.
-- Merge commits and `chore(release): X.Y.Z` release commits are exempt.
+- Merge commits, GitHub `Revert "..."` commits, autosquash prefixes (`fixup!`, `squash!`, `amend!`), and `chore(release): X.Y.Z` release commits are exempt.
 
 `python-semantic-release` is configured in `pyproject.toml` (`[tool.semantic_release]`). On every push/merge to `main`, `.github/workflows/release.yml`:
 
@@ -226,7 +226,7 @@ Every commit subject and PR title MUST follow [Conventional Commits](https://www
 3. regenerates the complete `CHANGELOG.md`,
 4. commits `chore(release): X.Y.Z`, tags `vX.Y.Z`, and creates the GitHub Release.
 
-The first automated release is `v1.0.0` and covers all history before the workflow was enabled. Never hand-edit the version fields or `CHANGELOG.md`. `.github/workflows/commit-conventions.yml` validates PR titles and commits with `scripts/check_conventional_commits.py`; `mise run release-preview` prints the next tag (run it on `main`). Branch protection must allow the Actions `GITHUB_TOKEN` to push the release commit and tag to `main`; if it does not, add a fine-grained `RELEASE_TOKEN` secret (`Contents: write`, branch-rule bypass) and the workflow will use it.
+Zero-versioning is enabled (`allow_zero_version = true`, `major_on_zero = false`), so the first automated release is `v0.1.0` and covers all history before the workflow was enabled. Never hand-edit the version fields or `CHANGELOG.md`. `.github/workflows/commit-conventions.yml` validates PR titles and commits with `scripts/check_conventional_commits.py`; `mise run release-preview` prints the next tag (run it on `main`). Branch protection must allow the Actions `GITHUB_TOKEN` to push the release commit and tag to `main`; if it does not, add a fine-grained `RELEASE_TOKEN` secret (`Contents: write`, branch-rule bypass) and the workflow will use it.
 
 ## Naming Conventions
 - **dlt tables**: `{source}__{entity}` (e.g., `hubspot__contacts`)

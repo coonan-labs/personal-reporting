@@ -26,7 +26,7 @@ CONVENTIONAL_COMMIT_RE = re.compile(
     r"(?:\((?P<scope>[A-Za-z0-9][A-Za-z0-9._/-]*)\))?"
     r"(?P<breaking>!)?: (?P<description>\S.*)$"
 )
-MERGE_COMMIT_RE = re.compile(r"^Merge\b")
+MERGE_COMMIT_RE = re.compile(r"^Merge (?:branch|pull request|tag|remote-tracking)")
 RELEASE_COMMIT_RE = re.compile(
     r"^chore\(release\): \d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$"
 )

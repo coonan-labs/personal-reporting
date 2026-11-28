@@ -35,5 +35,14 @@ jobs:
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: |
           set -o pipefail
-          git log --format=%s "$BASE_SHA..$HEAD_SHA" \
+          if [ "$BASE_SHA" = "$HEAD_SHA" ]; then
+            echo "No commits to validate"
+            exit 0
+          fi
+          commits="$(git log --format=%s "$BASE_SHA..$HEAD_SHA")"
+          if [ -z "$commits" ]; then
+            echo "error: no commits found between $BASE_SHA and $HEAD_SHA" >&2
+            exit 1
+          fi
+          printf '%s\n' "$commits" \
             | python3 scripts/check_conventional_commits.py --stdin

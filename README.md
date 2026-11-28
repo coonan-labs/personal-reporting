@@ -1,4 +1,4 @@
-# personal-reporting-pipelines
+# personal-reporting
 
 #### Development and Documentation
 
@@ -138,7 +138,7 @@ of concerns:
 
    ```bash
    git clone <repository-url>
-   cd personal-reporting-pipelines
+   cd personal-reporting
    mise install
    mise run setup
    ```
@@ -504,8 +504,9 @@ The type drives the release:
 | `build`, `chore`, `ci`, `docs`, `refactor`, `revert`, `style`, `test` | no release |
 
 The scope is optional. Pull request titles are validated because the repository
-squash-merges: the PR title becomes the commit subject on `main`. Merge commits
-and release commits (`chore(release): X.Y.Z`) are exempt.
+squash-merges: the PR title becomes the commit subject on `main`. Merge commits,
+GitHub `Revert "..."` commits, autosquash prefixes (`fixup!`, `squash!`,
+`amend!`), and release commits (`chore(release): X.Y.Z`) are exempt.
 
 ### Automated release flow
 
@@ -518,8 +519,10 @@ On every push or merge to `main`, `.github/workflows/release.yml`:
 4. commits `chore(release): X.Y.Z`, tags `vX.Y.Z`, pushes both, and creates the
    GitHub Release.
 
-The first automated release is `v1.0.0` and covers all history before the
-workflow was enabled; later releases bump from that tag. The workflow is the
+Zero-versioning is enabled (`allow_zero_version = true`,
+`major_on_zero = false`), so the project starts at `v0.1.0`. The first
+automated release is `v0.1.0` and covers all history before the workflow was
+enabled; later releases bump from that tag. The workflow is the
 only writer of the version fields and `CHANGELOG.md`; do not hand-edit either.
 Branch protection must allow the Actions `GITHUB_TOKEN` to push the release
 commit and tag to `main`. If it does not, add a fine-grained `RELEASE_TOKEN`
@@ -531,6 +534,7 @@ run is a no-op because release commits do not produce a new version.
 Preview the next release locally (run from `main`):
 
 ```bash
+git fetch --tags           # fresh clones need the release tags
 mise run release-preview   # print the next tag without changing files
 ```
 

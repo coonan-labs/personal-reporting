@@ -1,6 +1,6 @@
 [project]
 name = "personal-reporting-pipelines"
-version = "1.0.0"
+version = "0.1.0"
 description = "Personal data integration and analytics platform tracking personal disciplines/habits"
 requires-python = ">=3.12,<3.14"
 dependencies = [
@@ -28,6 +28,7 @@ dev = [
     "responses",
     "faker",
     "marimo",
+    "pyyaml",
     "sphinx",
     "sphinx-rtd-theme",
     "myst-parser",
@@ -50,7 +51,8 @@ constraint-dependencies = ["oauthlib<4.0.0"]
 # artifacts always agree with the generated tag.
 version_toml = ["pyproject.toml:project.version"]
 version_variables = ["dbt/dbt_project.yml:version"]
-allow_zero_version = false
+allow_zero_version = true
+major_on_zero = false
 tag_format = "v{version}"
 commit_parser = "conventional"
 # Release commits must also be valid Conventional Commits.

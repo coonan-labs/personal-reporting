@@ -1,6 +1,6 @@
 ---
 name: personal
-version: 1.0.0
+version: 0.1.0
 profile: personal
 model-paths: [models]
 analysis-paths: [analyses]

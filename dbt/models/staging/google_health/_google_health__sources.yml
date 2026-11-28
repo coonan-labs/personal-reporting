@@ -8,7 +8,7 @@ sources:
     config:
       # Freshness is measured from the dlt load timestamp: join each row's
       # _dlt_load_id to dlt's _dlt_loads metadata table and take the latest
-      # completed load. See https://github.com/michaelconan/personal-reporting-pipelines/issues/141
+      # completed load. See https://github.com/coonan-labs/personal-reporting/issues/141
       freshness:
         warn_after: {count: 336, period: hour}  # 14 days (weekly schedule)
         error_after: {count: 384, period: hour}  # 16 days

@@ -43,6 +43,14 @@ def test_uv_lock_project_version_matches_pyproject_version():
     assert project_package["version"] == pyproject["project"]["version"]
 
 
+def test_release_starts_in_zero_versioning():
+    pyproject = tomllib.loads((REPO_ROOT / "pyproject.toml").read_text())
+    release = pyproject["tool"]["semantic_release"]
+
+    assert release["allow_zero_version"] is True
+    assert release["major_on_zero"] is False
+
+
 def test_release_refreshes_the_lockfile():
     pyproject = tomllib.loads((REPO_ROOT / "pyproject.toml").read_text())
     release = pyproject["tool"]["semantic_release"]
