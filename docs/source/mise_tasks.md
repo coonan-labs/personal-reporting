@@ -93,5 +93,6 @@ if remote schema deletion fails.
 ## GitHub Actions
 
 Actions use `jdx/mise-action` and invoke the same tasks. Configure
-`OP_SERVICE_ACCOUNT_TOKEN` as a GitHub secret and `OP_ENVIRONMENT_ID` as a
-repository variable. The workflows install the 1Password CLI `latest`.
+`OP_SERVICE_ACCOUNT_TOKEN` as an environment secret and `OP_ENVIRONMENT_ID` as an
+environment variable in each of the `development`, `production`, and
+`production-scheduled` GitHub environments. The workflows install the 1Password CLI `latest`.
