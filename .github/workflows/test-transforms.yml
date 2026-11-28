@@ -37,7 +37,7 @@ jobs:
       DBT_ENGINE_NO_WARN_SEMANTIC_MANIFEST_VALIDATION: '1'
     steps:
       - name: check out code
-        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           persist-credentials: false
 
@@ -67,7 +67,8 @@ jobs:
         with:
           version: latest
 
-      # Uses the shared dev-md database; the concurrency group serializes runs
+      # Uses the dev-md database (personal_dev) from the development
+      # environment; the concurrency group serializes runs
       # because this job writes reporting_dev. Credentialed: runs only for
       # non-fork PRs from a repo/org owner, collaborator or member
       # (issue #174); external PRs get the mock builds above without

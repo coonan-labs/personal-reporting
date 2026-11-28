@@ -21,6 +21,8 @@ permissions:
 # The integration/e2e steps hit the shared dev warehouse and mutate dlt
 # state, so parallel runs must serialize rather than race (issue #174).
 # cancel-in-progress is false: a load must not be killed mid-flight.
+# Note the group is workflow-wide, so external mock-only PR runs also
+# serialize behind credentialed dev runs — accepted for warehouse safety.
 concurrency:
   group: test-pipelines-dev
   cancel-in-progress: false
@@ -44,7 +46,7 @@ jobs:
       MISE_ENABLE_TOOLS: uv,python,databricks-cli
     steps:
       - name: checkout code
-        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           persist-credentials: false
 
