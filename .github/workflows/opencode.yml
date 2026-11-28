@@ -18,12 +18,13 @@ jobs:
     # applies to /oc in a conversation comment (issue_comment): the
     # issue or PR's author must also be trusted — a member commenting
     # on an outsider's issue or an external PR would otherwise run the
-    # agent on untrusted text (issue #174).
+    # agent on untrusted text (issue #174). The command must lead the
+    # comment: a bare `contains` match also fires on prose that merely
+    # mentions "/oc" — the bot's own review text did exactly that and
+    # re-triggered this workflow in a loop.
     if: |
       contains(fromJSON('["OWNER", "MEMBER", "COLLABORATOR"]'), github.event.comment.author_association) &&
-      (contains(github.event.comment.body, ' /oc') ||
-      startsWith(github.event.comment.body, '/oc') ||
-      contains(github.event.comment.body, ' /opencode') ||
+      (startsWith(github.event.comment.body, '/oc') ||
       startsWith(github.event.comment.body, '/opencode')) &&
       (github.event_name != 'pull_request_review_comment' || github.event.pull_request.head.repo.fork == false) &&
       (github.event_name != 'issue_comment' || contains(fromJSON('["OWNER", "MEMBER", "COLLABORATOR"]'), github.event.issue.author_association))
@@ -32,7 +33,10 @@ jobs:
     timeout-minutes: 60
     permissions:
       id-token: write
-      contents: read
+      # The agent is expected to land changes (edit/bash are allowed),
+      # so its token needs write access; branch protection still
+      # governs what it can push to.
+      contents: write
       pull-requests: write
       issues: write
     steps:

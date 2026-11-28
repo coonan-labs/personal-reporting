@@ -29,6 +29,8 @@ jobs:
     # prod credentials are never available to this job (issue #174).
     environment: development
     runs-on: ubuntu-latest
+    # A hung dbt build must not burn the default 6h runner limit.
+    timeout-minutes: 30
     env:
       DBT_PROJECT_DIR: dbt
       DBT_PROFILES_DIR: dbt
