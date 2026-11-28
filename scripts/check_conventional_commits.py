@@ -24,7 +24,7 @@ CONVENTIONAL_TYPES = (
 CONVENTIONAL_COMMIT_RE = re.compile(
     r"^(?P<type>" + "|".join(CONVENTIONAL_TYPES) + r")"
     r"(?:\((?P<scope>[A-Za-z0-9][A-Za-z0-9._/-]*)\))?"
-    r"(?P<breaking>!)?: (?P<description>\S.*)$"
+    r"(?P<breaking>!)?:\s+(?P<description>\S.*)$"
 )
 MERGE_COMMIT_RE = re.compile(r"^Merge (?:branch|pull request|tag|remote-tracking)")
 RELEASE_COMMIT_RE = re.compile(

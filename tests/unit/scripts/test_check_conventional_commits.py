@@ -13,6 +13,7 @@ from scripts.check_conventional_commits import find_invalid_messages, main, vali
     "message",
     [
         "feat: add release workflow",
+        "feat:  multiple spaces after the colon",
         "fix(dbt): align contract types",
         "chore(deps): bump actions/checkout",
         "feat(api)!: remove legacy endpoint",

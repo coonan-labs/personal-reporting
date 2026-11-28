@@ -500,7 +500,7 @@ The type drives the release:
 | --- | --- |
 | `feat` | minor bump |
 | `fix`, `perf` | patch bump |
-| Any type with `!` after the scope or a `BREAKING CHANGE:` footer | major bump |
+| Any type with `!` after the scope or a `BREAKING CHANGE:` footer | major bump (minor while `0.x`, see below) |
 | `build`, `chore`, `ci`, `docs`, `refactor`, `revert`, `style`, `test` | no release |
 
 The scope is optional. Pull request titles are validated because the repository

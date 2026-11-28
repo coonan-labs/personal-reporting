@@ -30,6 +30,9 @@ jobs:
       - name: Set up mise and project tools
         uses: jdx/mise-action@924e7c586e33d7d4bae9c14e26c5d22e2beb6e78 # v5.3.0
 
+      - name: Verify lockfile is up to date
+        run: uv lock --check
+
       - name: Install dependencies
         run: mise run setup
 

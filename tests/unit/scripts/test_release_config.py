@@ -81,13 +81,13 @@ def test_semantic_release_stamps_both_version_files(tmp_path, monkeypatch):
 
     for definition in release["version_toml"]:
         declaration = TomlVersionDeclaration.from_string_definition(definition)
-        assert declaration.update_file_w_version(new_version) is not None
+        assert declaration.update_file_w_version(new_version)
 
     for definition in release["version_variables"]:
         declaration = PatternVersionDeclaration.from_string_definition(
             definition, release["tag_format"]
         )
-        assert declaration.update_file_w_version(new_version) is not None
+        assert declaration.update_file_w_version(new_version)
 
     stamped_pyproject = tomllib.loads((tmp_path / "pyproject.toml").read_text())
     assert stamped_pyproject["project"]["version"] == "9.8.7"

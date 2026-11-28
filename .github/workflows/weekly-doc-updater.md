@@ -219,7 +219,7 @@ For seed files (`dbt/seeds/_seeds__properties.yml`):
 
 If you made any documentation changes, use the `create_pull_request` MCP tool from the **safe-outputs MCP server** (not the GitHub MCP server) to open a PR.
 
-**PR Title Format**: `docs: Weekly documentation update — YYYY-MM-DD`
+**PR Title Format**: `Weekly documentation update — YYYY-MM-DD` (the `docs: ` prefix is added automatically)
 
 **PR Description Template**:
 ```markdown

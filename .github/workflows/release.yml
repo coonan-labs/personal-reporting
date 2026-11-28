@@ -35,8 +35,9 @@ jobs:
           token: ${{ secrets.RELEASE_TOKEN || secrets.GITHUB_TOKEN }}
 
       - name: Reset release branch to workflow SHA
-        # Release exactly the commit this run evaluated. PSR verifies the
-        # upstream has not moved before it pushes the release commit/tag.
+        # Release exactly the commit this run evaluated. PSR calls
+        # verify_upstream_unchanged() before pushing and aborts if main moved,
+        # so this cannot push onto a stale base.
         env:
           WORKFLOW_SHA: ${{ github.sha }}
         run: git reset --hard "$WORKFLOW_SHA"

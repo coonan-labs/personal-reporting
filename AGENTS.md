@@ -215,7 +215,7 @@ Use the session's model id with the provider prefix removed (e.g. a session runn
 Every commit subject and PR title MUST follow [Conventional Commits](https://www.conventionalcommits.org/): `<type>(<scope>): <description>`.
 
 - Allowed types: `build`, `chore`, `ci`, `docs`, `feat`, `fix`, `perf`, `refactor`, `revert`, `style`, `test`.
-- `feat` → minor bump; `fix`/`perf` → patch bump; `!` after the type/scope or a `BREAKING CHANGE:` footer → major bump.
+- `feat` → minor bump; `fix`/`perf` → patch bump; `!` after the type/scope or a `BREAKING CHANGE:` footer → major bump (minor while the version is `0.x` because `major_on_zero = false`).
 - `build`, `chore`, `ci`, `docs`, `refactor`, `revert`, `style`, and `test` do not bump the version.
 - Merge commits, GitHub `Revert "..."` commits, autosquash prefixes (`fixup!`, `squash!`, `amend!`), and `chore(release): X.Y.Z` release commits are exempt.
 

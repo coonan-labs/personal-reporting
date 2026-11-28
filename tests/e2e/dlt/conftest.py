@@ -19,21 +19,10 @@ os.environ["DBT_TARGET"] = E2E_TARGET
 os.environ["DBT_SCHEMA"] = "reporting_test"
 os.environ["RAW_SCHEMA"] = "raw_test"
 
-import dlt  # noqa: E402
-
-# PyPI imports
-import pytest  # noqa: E402
-from dlt.common.configuration.providers.google_secrets import GoogleSecretsProvider  # noqa: E402
-
-from pipelines import SECRET_STORE  # noqa: E402
-from pipelines.runner import get_destination  # noqa: E402
-from tests.e2e.dlt.cleanup import cleanup_e2e_pipeline  # noqa: E402
-
-logger = logging.getLogger(__name__)
-
 # Only enable Google Secrets when the project uses that secret store. Enabling
 # it unconditionally forces a GCP credential lookup even when 1Password (the
-# default) supplies the credentials.
+# default) supplies the credentials. Configure providers before importing dlt.
+SECRET_STORE = os.getenv("SECRET_STORE", default="1password")
 if SECRET_STORE == "google":
     os.environ["PROVIDERS__ENABLE_GOOGLE_SECRETS"] = "true"
     os.environ["PROVIDERS__GOOGLE_SECRETS__ONLY_SECRETS"] = "true"
@@ -42,6 +31,17 @@ if SECRET_STORE == "google":
 else:
     os.environ["PROVIDERS__ENABLE_GOOGLE_SECRETS"] = "false"
 os.environ["DLT_TELEMETRY_DISABLED"] = "1"
+
+import dlt  # noqa: E402
+
+# PyPI imports
+import pytest  # noqa: E402
+from dlt.common.configuration.providers.google_secrets import GoogleSecretsProvider  # noqa: E402
+
+from pipelines.runner import get_destination  # noqa: E402
+from tests.e2e.dlt.cleanup import cleanup_e2e_pipeline  # noqa: E402
+
+logger = logging.getLogger(__name__)
 
 
 @pytest.fixture(scope="module", autouse=True)

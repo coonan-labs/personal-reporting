@@ -71,7 +71,8 @@ class TestPipelines:
 
         # GIVEN
         secrets = dlt.secrets
-        # secrets.config_providers[2].only_toml_fragments = False
+        # Fail fast with a clear error if the Google Health refresh token is
+        # missing before running the pipeline.
         secrets["sources.google_health.refresh_token"]
 
         # WHEN
